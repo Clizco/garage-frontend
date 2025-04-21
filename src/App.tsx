@@ -22,6 +22,7 @@ import PublicRoutes from "./utils/publicRoutes";
 import InstallButton from "./components/installbutton/installbutton";
 import UserTable from "./pages/Users/UsersTable";
 import PackageTable from "./pages/Packages/PackageTable";
+import DriverTable from "./pages/Drivers/DriversTable";
 
 export default function App() {
   return (
@@ -40,6 +41,8 @@ export default function App() {
             <Route path="/blank" element={<Blank />} />
             <Route path="/users" element={<UserTable />} />
             <Route path="/packages" element={<PackageTable />} />
+            <Route path="/drivers" element={<DriverTable />} />
+            
 
             {/* Auth Pages */}
 

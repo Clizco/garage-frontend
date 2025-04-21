@@ -8,6 +8,7 @@ import {
   GridIcon,
   HorizontaLDots,
   UserCircleIcon,
+  TableIcon
 } from "../icons";
 import { useSidebar } from "../context/SidebarContext";
 
@@ -36,6 +37,11 @@ const navItems: NavItem[] = [
     path: "/packages",
 
   },
+  {
+    icon: <TableIcon />,
+    name: "Conductores",
+    path: "/drivers",
+  }
 ];
 
 
