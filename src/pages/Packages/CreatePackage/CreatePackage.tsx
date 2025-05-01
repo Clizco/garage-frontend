@@ -82,9 +82,7 @@ export default function PrealertPackage() {
     }
   };
 
-  const handleBack = () => {
-    navigate('/packages');
-  };
+  
 
   return (
     <ComponentCard title="Prealertar Paquete">
