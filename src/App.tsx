@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router";
+import { Toaster } from "react-hot-toast"; // 💥 Agregado
 import SignIn from "./pages/AuthPages/SignIn";
 import SignUp from "./pages/AuthPages/SignUp";
 import NotFound from "./pages/OtherPage/NotFound";
@@ -19,42 +20,59 @@ import AppLayout from "./layout/AppLayout";
 import { ScrollToTop } from "./components/common/ScrollToTop";
 import Home from "./pages/Dashboard/Home";
 import PublicRoutes from "./utils/publicRoutes";
+import PrivateRoutes from "./utils/privateRoutes";
 import InstallButton from "./components/installbutton/installbutton";
-import UserTable from "./pages/Users/UsersTable";
-import PackageTable from "./pages/Packages/PackageTable";
-import DriverTable from "./pages/Drivers/DriversTable";
+import ShipmentTable from "./pages/Shipments/ShipmentTable";
+import CreateShipment from "./pages/Shipments/CreateShipment/CreateShipment";
+import AddressBook from "./pages/Adresses/AdressTable";
+import CreateAddress from "./pages/Adresses/CreateAdress/CreateAdress";
+import PackageTable from "./pages/Packages/PackagesTable";
+import CreatePackage from "./pages/Packages/CreatePackage/CreatePackage";
 
 export default function App() {
   return (
-    <>
-      <Router>
-        <InstallButton />
-        <ScrollToTop />
-        <Routes>
-          {/* Dashboard Layout */}
+    <Router>
+      <InstallButton />
+      <Toaster
+        position="top-right"
+        reverseOrder={false}
+        toastOptions={{
+          duration: 4000,
+          style: {
+            background: "#333",
+            color: "#fff",
+            borderRadius: "8px",
+            fontSize: "14px",
+          },
+        }}
+      />
+      <ScrollToTop />
+      <Routes>
+
+        {/* Rutas privadas (requieren login) */}
+        <Route element={<PrivateRoutes />}>
           <Route element={<AppLayout />}>
+            {/* Dashboard */}
             <Route index path="/" element={<Home />} />
 
-            {/* Others Page */}
+            {/* Otras páginas */}
             <Route path="/profile" element={<UserProfiles />} />
             <Route path="/calendar" element={<Calendar />} />
             <Route path="/blank" element={<Blank />} />
-            <Route path="/users" element={<UserTable />} />
+            <Route path="/shipments" element={<ShipmentTable />} />
+            <Route path="/create-shipment" element={<CreateShipment />} />
+            <Route path="/addresses" element={<AddressBook />} />
+            <Route path="/createaddress" element={<CreateAddress />} />
             <Route path="/packages" element={<PackageTable />} />
-            <Route path="/drivers" element={<DriverTable />} />
-            
+            <Route path="/create-package" element={<CreatePackage />} />
 
-            {/* Auth Pages */}
-
-            {/* Dashboard */}
-
-            {/* Forms */}
+            {/* Formularios */}
             <Route path="/form-elements" element={<FormElements />} />
 
-            {/* Tables */}
+            {/* Tablas */}
             <Route path="/basic-tables" element={<BasicTables />} />
 
-            {/* Ui Elements */}
+            {/* Componentes UI */}
             <Route path="/alerts" element={<Alerts />} />
             <Route path="/avatars" element={<Avatars />} />
             <Route path="/badge" element={<Badges />} />
@@ -62,22 +80,22 @@ export default function App() {
             <Route path="/images" element={<Images />} />
             <Route path="/videos" element={<Videos />} />
 
-            {/* Charts */}
+            {/* Gráficos */}
             <Route path="/line-chart" element={<LineChart />} />
             <Route path="/bar-chart" element={<BarChart />} />
           </Route>
+        </Route>
 
-          <Route element={<PublicRoutes />}>
+        {/* Rutas públicas */}
+        <Route element={<PublicRoutes />}>
           <Route path="/signin" element={<SignIn />} />
           <Route path="/signup" element={<SignUp />} />
-          </Route>
+        </Route>
 
-          
+        {/* Ruta de error (404) */}
+        <Route path="*" element={<NotFound />} />
 
-          {/* Fallback Route */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </Router>
-    </>
+      </Routes>
+    </Router>
   );
 }

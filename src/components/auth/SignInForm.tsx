@@ -1,7 +1,7 @@
 import { useState, FormEvent, ChangeEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
-import { ChevronLeftIcon, EyeCloseIcon, EyeIcon } from "../../icons";
+import { EyeCloseIcon, EyeIcon } from "../../icons";
 import Label from "../form/Label";
 import Input from "../form/input/InputField";
 import Checkbox from "../form/input/Checkbox";
@@ -59,7 +59,7 @@ const SignInForm: React.FC = () => {
       localStorage.setItem("userRole", roleResponse.data.role);
 
       setLoading(false);
-      navigate("/dashboard");
+      navigate("/");
     } catch (error: any) {
       setLoading(false);
       if (error.response?.status === 401) {
@@ -78,8 +78,6 @@ const SignInForm: React.FC = () => {
           to="/"
           className="inline-flex items-center text-sm text-gray-500 transition-colors hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
         >
-          <ChevronLeftIcon className="size-5" />
-          Back to dashboard
         </Link>
       </div>
       <div className="flex flex-col justify-center flex-1 w-full max-w-md mx-auto">

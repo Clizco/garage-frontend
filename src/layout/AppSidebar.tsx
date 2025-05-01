@@ -5,10 +5,10 @@ import { Link, useLocation } from "react-router";
 import {
   BoxCubeIcon,
   ChevronDownIcon,
-  GridIcon,
   HorizontaLDots,
-  UserCircleIcon,
-  TableIcon
+  PlusIcon,
+  TableIcon,
+  LockIcon
 } from "../icons";
 import { useSidebar } from "../context/SidebarContext";
 
@@ -22,26 +22,26 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   {
-    icon: <GridIcon />,
-    name: "Dashboard",
-    subItems: [{ name: "Ecommerce", path: "/", pro: false }],
-  },
-  {
-    icon: <UserCircleIcon />,
-    name: "Usuarios",
-    path: "/users",
+    icon: <LockIcon />,
+    name: "Home",
+    path: "/",
   },
   {
     icon: <BoxCubeIcon />,
     name: "Paquetes",
     path: "/packages",
+  },
+  {
+    icon: <PlusIcon />,
+    name: "Envios",
+    path: "/shipments",
 
   },
   {
     icon: <TableIcon />,
-    name: "Conductores",
-    path: "/drivers",
-  }
+    name: "Direcciones",
+    path: "/addresses",
+  },
 ];
 
 

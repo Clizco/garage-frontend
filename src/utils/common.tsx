@@ -27,3 +27,10 @@ export const setUserSession = (token: string, user: User): void => {
   localStorage.setItem('token', token);
   localStorage.setItem('user', JSON.stringify(user));
 };
+
+export const logout = (): void => {
+  localStorage.removeItem("token");
+  localStorage.removeItem("user");
+  localStorage.removeItem("decodedToken");
+  localStorage.removeItem("userRole"); 
+};

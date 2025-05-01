@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { DropdownItem } from "../ui/dropdown/DropdownItem";
 import { Dropdown } from "../ui/dropdown/Dropdown";
-import { Link } from "react-router";
-import { getUser } from "../../utils/common"; // ⬅️ Importar la función para obtener el usuario
+import { useNavigate } from "react-router-dom";
+import { getUser, logout } from "../../utils/common"; // asegúrate que la ruta sea correcta
 
 interface User {
   user_firstname: string;
@@ -13,6 +13,7 @@ interface User {
 export default function UserDropdown() {
   const [isOpen, setIsOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const userData = getUser();
@@ -27,6 +28,11 @@ export default function UserDropdown() {
 
   const toggleDropdown = () => setIsOpen(!isOpen);
   const closeDropdown = () => setIsOpen(false);
+
+  const handleLogout = () => {
+    logout(); // ✅ limpia localStorage
+    navigate("/signin"); // ✅ redirige al login
+  };
 
   return (
     <div className="relative">
@@ -97,12 +103,12 @@ export default function UserDropdown() {
           </li>
         </ul>
 
-        <Link
-          to="/signin"
+        <button
+          onClick={handleLogout}
           className="flex items-center gap-3 px-3 py-2 mt-3 font-medium text-gray-700 rounded-lg group text-theme-sm hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-300"
         >
           Sign out
-        </Link>
+        </button>
       </Dropdown>
     </div>
   );
