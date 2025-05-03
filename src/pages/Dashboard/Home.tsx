@@ -2,6 +2,8 @@ import PageMeta from "../../components/common/PageMeta";
 import { useEffect, useState } from "react";
 import { getUser } from "../../utils/common";
 import axios from "axios";
+import { ClipboardCopy, Check } from "lucide-react";
+import toast from "react-hot-toast";
 
 const apiUrl = import.meta.env.VITE_API_URL || "";
 
@@ -29,12 +31,12 @@ interface Address {
 export default function Home() {
   const [user, setUser] = useState<CommonUser | null>(null);
   const [address, setAddress] = useState<Address | null>(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     const currentUser = getUser() as CommonUser | null;
     if (currentUser) {
       setUser(currentUser);
-
       if (currentUser.user_address) {
         fetchAddress(currentUser.id, currentUser.user_address);
       }
@@ -51,11 +53,8 @@ export default function Home() {
           },
         }
       );
-
       const selected = response.data.find((addr) => addr.id === Number(addressId));
-      if (selected) {
-        setAddress(selected);
-      }
+      if (selected) setAddress(selected);
     } catch (error) {
       console.error("Error fetching address:", error);
     }
@@ -64,9 +63,11 @@ export default function Home() {
   const copyPhone = async () => {
     try {
       await navigator.clipboard.writeText("+1 (305) 592-4534");
-      alert("Teléfono copiado: +1 (305) 592-4534");
+      toast.success("Teléfono copiado 📋");
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     } catch (error) {
-      console.error("Error al copiar teléfono:", error);
+      toast.error("No se pudo copiar 😢");
     }
   };
 
@@ -132,12 +133,20 @@ export default function Home() {
                 </p>
               </div>
               <div>
-                <p className="font-semibold">Teléfono:</p>
+                <p className="font-semibold mb-1">Teléfono:</p>
                 <button
                   onClick={copyPhone}
-                  className="hover:underline text-blue-600 dark:text-blue-400"
+                  className="relative flex items-center gap-2 text-blue-600 dark:text-blue-400 hover:text-blue-800 group"
+                  title="Copiar teléfono"
                 >
-                  +1 (305) 592-4534 (copy)
+                  {/* Mini alerta visual */}
+                  {copied && (
+                    <span className="absolute -top-7 left-1/2 -translate-x-1/2 bg-green-500 text-white text-xs px-2 py-1 rounded shadow transition-opacity duration-300 z-10">
+                      ¡Teléfono copiado!
+                    </span>
+                  )}
+                  <span className="group-hover:underline">+1 (305) 592-4534</span>
+                  {copied ? <Check size={18} /> : <ClipboardCopy size={18} />}
                 </button>
               </div>
             </div>

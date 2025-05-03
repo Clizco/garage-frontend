@@ -11,31 +11,28 @@ export default function Calculator() {
   const [isKg, setIsKg] = useState(false); // false = lb, true = kg
 
   const PRICE_PER_POUND = 2.0;
-  const PRICE_PER_KILO = 4.41; // 1kg = 2.2lb * $2.00
+  const PRICE_PER_KILO = 4.41;
 
-  const formatInput = (value: string) => {
-    const numeric = value.replace(/[^\d]/g, '');
+  const handleWeightChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let value = e.target.value.replace(/[^\d]/g, '');
 
-    if (numeric.length === 0) return '';
-
-    if (numeric.length <= 2) {
-      return '0.' + numeric.padStart(2, '0');
+    // Limitar a máximo 5 dígitos (3 enteros y 2 decimales)
+    if (value.length > 5) {
+      value = value.slice(0, 5);
     }
 
-    const intPart = numeric.slice(0, numeric.length - 2).slice(-3); // máximo 3 enteros
-    const decimalPart = numeric.slice(-2);
-
-    return `${intPart}.${decimalPart}`;
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatInput(e.target.value);
-    setWeight(formatted);
+    if (value.length <= 2) {
+      setWeight('0.' + value.padStart(2, '0'));
+    } else {
+      const intPart = value.slice(0, value.length - 2).replace(/^0+/, '') || '0';
+      const decimalPart = value.slice(value.length - 2);
+      setWeight(`${intPart}.${decimalPart}`);
+    }
   };
 
   const handleCheckboxChange = () => {
     setIsKg(!isKg);
-    setPrice(null); // reset precio al cambiar unidad
+    setPrice(null); // Reset al cambiar unidad
   };
 
   const calculatePrice = () => {
@@ -56,11 +53,11 @@ export default function Calculator() {
           <Label htmlFor="weight">Peso ({isKg ? 'kg' : 'lb'})</Label>
           <Input
             id="weight"
-            placeholder="Ej: 2.5"
+            placeholder="Ej: 2.50"
             type="text"
             inputMode="numeric"
             value={weight}
-            onChange={handleChange}
+            onChange={handleWeightChange}
             className="appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
           />
         </div>
@@ -77,7 +74,8 @@ export default function Calculator() {
 
         {price !== null && (
           <div className="text-sm text-gray-700 dark:text-white mt-2">
-            Precio aproximado: <span className="font-bold">${price.toFixed(2)}</span>
+            Precio aproximado:{' '}
+            <span className="font-bold">${price.toFixed(2)}</span>
           </div>
         )}
       </div>
