@@ -1,6 +1,6 @@
 import { useState, FormEvent, ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 import ComponentCard from '../../../components/common/ComponentCard';
 import Label from '../../../components/form/Label';
 import Input from '../../../components/form/input/InputField';
@@ -16,12 +16,33 @@ export default function PrealertPackage() {
   const [packageDescription, setPackageDescription] = useState('');
   const [packageValue, setPackageValue] = useState('');
   const [packageStore, setPackageStore] = useState('');
+  const [packageTrackingId, setPackageTrackingId] = useState('');
   const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
+  const [fileName, setFileName] = useState<string>('');
+  const [uploadProgress, setUploadProgress] = useState<number>(0);
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setInvoiceFile(e.target.files[0]);
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.type !== 'application/pdf') {
+      alert('Solo se permiten archivos PDF.');
+      e.target.value = '';
+      setInvoiceFile(null);
+      setFileName('');
+      return;
     }
+
+    if (file.size > 2 * 1024 * 1024) {
+      alert('El archivo excede el tamaño máximo de 2 MB.');
+      e.target.value = '';
+      setInvoiceFile(null);
+      setFileName('');
+      return;
+    }
+
+    setInvoiceFile(file);
+    setFileName(file.name);
   };
 
   const handleWeightChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -48,6 +69,19 @@ export default function PrealertPackage() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+
+    if (
+      !packageWeight ||
+      !packageDescription ||
+      !packageValue ||
+      !packageStore ||
+      !packageTrackingId ||
+      !invoiceFile
+    ) {
+      alert('Por favor, completa todos los campos antes de enviar.');
+      return;
+    }
+
     try {
       const token = localStorage.getItem('token');
       const user = JSON.parse(localStorage.getItem('decodedToken') || '{}');
@@ -62,27 +96,36 @@ export default function PrealertPackage() {
       formData.append('package_value', cleanPackageValue);
       formData.append('package_store', packageStore);
       formData.append('package_status', 'Pending');
-      formData.append('user_id', userId);
-      if (invoiceFile) {
-        formData.append('invoice', invoiceFile);
-      }
+      formData.append('package_tracking_id', packageTrackingId);
+      formData.append('user_id', userId.toString());
+      formData.append('invoice', invoiceFile);
 
-      await axios.post(createPackageUrl, formData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'multipart/form-data',
-        },
-      });
+    await axios.post(`${createPackageUrl}?user_id=${userId}`, formData, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'multipart/form-data',
+      },
+      onUploadProgress: (progressEvent: ProgressEvent) => {
+        if (progressEvent.total) {
+          const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          setUploadProgress(percent);
+        }
+      },
+    } as any); // Explicitly cast to 'any' to include onUploadProgress
 
       alert('¡Paquete prealertado exitosamente!');
+      setUploadProgress(0); // Reinicia progreso
       navigate('/packages');
     } catch (error) {
       console.error('Error al prealertar paquete:', error);
-      alert('Hubo un error al prealertar el paquete.');
+      setUploadProgress(0); // Reinicia en error
+
+      if (error instanceof AxiosError && error.response) {
+      } else {
+        alert('Hubo un error al prealertar el paquete.');
+      }
     }
   };
-
-  
 
   return (
     <ComponentCard title="Prealertar Paquete">
@@ -154,27 +197,52 @@ export default function PrealertPackage() {
         </div>
 
         <div>
-            <Label htmlFor="invoice">Adjuntar Factura (PDF)</Label>
-            <input
-                id="invoice"
-                type="file"
-                accept="application/pdf"
-                onChange={handleFileChange}
-                className="border rounded px-3 py-2 w-full text-gray-900 dark:text-white bg-white dark:bg-gray-800"
-            />
+          <Label htmlFor="packageTrackingId">Tracking ID</Label>
+          <Input
+            id="packageTrackingId"
+            value={packageTrackingId}
+            onChange={(e) => setPackageTrackingId(e.target.value)}
+            placeholder="Ej: 1Z999AA10123456784"
+            aria-required="true"
+          />
         </div>
 
+        <div>
+          <Label htmlFor="invoice">Adjuntar Factura (PDF)</Label>
+          <input
+            id="invoice"
+            type="file"
+            accept="application/pdf"
+            onChange={handleFileChange}
+            className="border rounded px-3 py-2 w-full text-gray-900 dark:text-white bg-white dark:bg-gray-800"
+            required
+          />
+          {fileName && (
+            <p className="text-sm text-green-600 dark:text-green-400 mt-1">
+              Archivo seleccionado: {fileName}
+            </p>
+          )}
+        </div>
+
+        {uploadProgress > 0 && (
+          <div className="w-full bg-gray-200 rounded-full h-4 dark:bg-gray-700 mt-2">
+            <div
+              className="bg-blue-600 h-4 rounded-full text-xs text-white text-center transition-all duration-200"
+              style={{ width: `${uploadProgress}%` }}
+            >
+              {uploadProgress}%
+            </div>
+          </div>
+        )}
 
         <div className="flex items-center justify-start gap-4 mt-4">
-            <div className="flex justify-start">
           <button
-                type="button"
-                onClick={() => navigate(-1)}
-                className="bg-blue-500 text-white px-4 py-2 rounded shadow hover:bg-blue-600"
-            >
-                Volver
-            </button>
-            </div>
+            type="button"
+            onClick={() => navigate(-1)}
+            className="bg-blue-500 text-white px-4 py-2 rounded shadow hover:bg-blue-600"
+          >
+            Volver
+          </button>
           <Button variant="primary" size="md">
             Prealertar Paquete
           </Button>

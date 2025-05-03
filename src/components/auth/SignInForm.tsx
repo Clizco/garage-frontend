@@ -22,18 +22,20 @@ const SignInForm: React.FC = () => {
   interface SignInResponse {
     token: string;
   }
-  
+
   const handleLogin = async (e: FormEvent<HTMLFormElement>) => {
-      e.preventDefault();
-      setError("");
-      setLoading(true);
-      try {
-        const resp = await axios.post<SignInResponse>(url, {
-          user_email: email,
-          user_password: password,
-        });
-  
-        const token = resp.data.token;
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    try {
+      const lowerCaseEmail = email.toLowerCase(); // <- convertir antes del envío
+
+      const resp = await axios.post<SignInResponse>(url, {
+        user_email: lowerCaseEmail,
+        user_password: password,
+      });
+
+      const token = resp.data.token;
       localStorage.setItem("token", token);
 
       const userApiUrl = `${apiUrl}/users/user/token`;
@@ -77,8 +79,7 @@ const SignInForm: React.FC = () => {
         <Link
           to="/"
           className="inline-flex items-center text-sm text-gray-500 transition-colors hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
-        >
-        </Link>
+        ></Link>
       </div>
       <div className="flex flex-col justify-center flex-1 w-full max-w-md mx-auto">
         <div>
@@ -91,24 +92,30 @@ const SignInForm: React.FC = () => {
           <form onSubmit={handleLogin}>
             <div className="space-y-6">
               <div>
-                <Label>Email <span className="text-error-500">*</span></Label>
+                <Label>
+                  Email <span className="text-error-500">*</span>
+                </Label>
                 <Input
                   placeholder="info@gmail.com"
                   value={email}
-                  onChange={(e: ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                    setEmail(e.target.value.toLowerCase())
+                  }
                   type="email"
-                 
                 />
               </div>
               <div>
-                <Label>Password <span className="text-error-500">*</span></Label>
+                <Label>
+                  Password <span className="text-error-500">*</span>
+                </Label>
                 <div className="relative">
                   <Input
                     type={showPassword ? "text" : "password"}
                     placeholder="Enter your password"
                     value={password}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
-                  
+                    onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                      setPassword(e.target.value)
+                    }
                   />
                   <span
                     onClick={() => setShowPassword(!showPassword)}
@@ -139,10 +146,9 @@ const SignInForm: React.FC = () => {
               {error && <p className="text-sm text-red-500">{error}</p>}
               {loading && <p className="text-sm text-gray-500">Cargando...</p>}
 
-              <Button className="w-full" size="sm"  disabled={loading}>
+              <Button className="w-full" size="sm" disabled={loading}>
                 {loading ? "Iniciando..." : "Sign in"}
               </Button>
-
             </div>
           </form>
           <div className="mt-5">

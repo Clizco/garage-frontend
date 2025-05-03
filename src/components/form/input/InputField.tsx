@@ -15,6 +15,7 @@ interface InputProps {
   disabled?: boolean;
   success?: boolean;
   error?: boolean;
+  inputMode?: string; 
   hint?: string;
 }
 

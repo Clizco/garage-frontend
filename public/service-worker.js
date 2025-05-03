@@ -2,8 +2,6 @@ const CACHE_NAME = "mi-app-cache-v1";
 const urlsToCache = [
   "/",
   "/index.html",
-  "/logo192.png",
-  "/logo512.png",
   "/manifest.json",
 ];
 

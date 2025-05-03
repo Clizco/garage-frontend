@@ -8,7 +8,9 @@ import {
   HorizontaLDots,
   PlusIcon,
   TableIcon,
-  LockIcon
+  LockIcon,
+  BoltIcon
+  
 } from "../icons";
 import { useSidebar } from "../context/SidebarContext";
 
@@ -23,7 +25,7 @@ type NavItem = {
 const navItems: NavItem[] = [
   {
     icon: <LockIcon />,
-    name: "Home",
+    name: "Inicio",
     path: "/",
   },
   {
@@ -34,13 +36,19 @@ const navItems: NavItem[] = [
   {
     icon: <PlusIcon />,
     name: "Envios",
-    path: "/shipments",
+    subItems: [{ name: "Enviados", path: "/shipments", pro: false, new: false }, { name: "Recibidos", path: "/shipments/received", pro: false, new: false }],
+    
 
   },
   {
     icon: <TableIcon />,
     name: "Direcciones",
     path: "/addresses",
+  },
+  {
+    icon: <BoltIcon/>,
+    name: "Calculadora",
+    path: "/calculator",
   },
 ];
 
@@ -257,33 +265,7 @@ const AppSidebar: React.FC = () => {
           !isExpanded && !isHovered ? "lg:justify-center" : "justify-start"
         }`}
       >
-        <Link to="/">
-          {isExpanded || isHovered || isMobileOpen ? (
-            <>
-              <img
-                className="dark:hidden"
-                src="/images/logo/logo.svg"
-                alt="Logo"
-                width={150}
-                height={40}
-              />
-              <img
-                className="hidden dark:block"
-                src="/images/logo/logo-dark.svg"
-                alt="Logo"
-                width={150}
-                height={40}
-              />
-            </>
-          ) : (
-            <img
-              src="/images/logo/logo-icon.svg"
-              alt="Logo"
-              width={32}
-              height={32}
-            />
-          )}
-        </Link>
+
       </div>
       <div className="flex flex-col overflow-y-auto duration-300 ease-linear no-scrollbar">
         <nav className="mb-6">

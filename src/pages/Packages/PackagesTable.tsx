@@ -18,6 +18,7 @@ interface Package {
   package_value: string;
   package_store: string;
   package_status: string;
+  package_tracking_id: string;
   created_at: string;
   updated_at: string;
   invoice_path?: string;
@@ -72,7 +73,6 @@ export default function PackageTable() {
 
   return (
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
-      {/* Botón para prealertar paquete */}
       <div className="flex justify-end p-4">
         <Button size="sm" variant="primary" onClick={handleCreate}>
           Prealertar Paquete
@@ -85,6 +85,7 @@ export default function PackageTable() {
             <TableRow>
               <TableCell isHeader className="px-5 py-3 text-start text-gray-500 font-medium text-theme-xs dark:text-gray-400">Creado</TableCell>
               <TableCell isHeader className="px-5 py-3 text-start text-gray-500 font-medium text-theme-xs dark:text-gray-400">Peso</TableCell>
+              <TableCell isHeader className="px-5 py-3 text-start text-gray-500 font-medium text-theme-xs dark:text-gray-400">Tracking</TableCell>
               <TableCell isHeader className="px-5 py-3 text-start text-gray-500 font-medium text-theme-xs dark:text-gray-400">Descripción</TableCell>
               <TableCell isHeader className="px-5 py-3 text-start text-gray-500 font-medium text-theme-xs dark:text-gray-400">Valor</TableCell>
               <TableCell isHeader className="px-5 py-3 text-start text-gray-500 font-medium text-theme-xs dark:text-gray-400">Tienda</TableCell>
@@ -101,6 +102,9 @@ export default function PackageTable() {
                 </TableCell>
                 <TableCell className="px-5 py-3 text-start text-gray-500 text-theme-sm dark:text-gray-400">
                   {pkg.package_weight}
+                </TableCell>
+                <TableCell className="px-5 py-3 text-start text-gray-500 text-theme-sm dark:text-gray-400">
+                  {pkg.package_tracking_id}
                 </TableCell>
                 <TableCell className="px-5 py-3 text-start text-gray-500 text-theme-sm dark:text-gray-400">
                   {pkg.package_description}
@@ -127,7 +131,7 @@ export default function PackageTable() {
                 </TableCell>
                 <TableCell className="px-5 py-3 text-start">
                   {pkg.invoice_path ? (
-                    <Button size="sm" variant="outline" onClick={() => pkg.invoice_path && handleDownloadInvoice(pkg.invoice_path)}>
+                    <Button size="sm" variant="outline" onClick={() => handleDownloadInvoice(pkg.invoice_path!)}>
                       Descargar
                     </Button>
                   ) : (

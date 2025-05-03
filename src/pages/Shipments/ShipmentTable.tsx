@@ -41,7 +41,6 @@ const formatDate = (dateString: string) => {
 export default function ShipmentTable() {
   const [shipments, setShipments] = useState<Shipment[]>([]);
   const [provinces, setProvinces] = useState<Record<number, string>>({});
-  const [activeTab, setActiveTab] = useState<'received' | 'sent'>('sent');
   const [loading, setLoading] = useState(false);
   const [fade, setFade] = useState(false);
   const navigate = useNavigate();
@@ -67,30 +66,16 @@ export default function ShipmentTable() {
     const fetchShipments = async () => {
       try {
         setLoading(true);
-
         const token = localStorage.getItem('token');
         const user = JSON.parse(localStorage.getItem('decodedToken') || '{}');
         const userId = user?.id;
-        const userEmail = user?.email;
 
-        if (!token || (!userId && !userEmail)) {
+        if (!token || !userId) {
           console.error('Token o datos de usuario no encontrados.');
           return;
         }
 
-        let url = '';
-
-        if (activeTab === 'sent' && userId) {
-          url = `${apiUrl}/shipments/shipments/user/${userId}`;
-        } else if (activeTab === 'received' && userEmail) {
-          url = `${apiUrl}/shipments/shipments/assigned/${userEmail}`;
-        }
-
-        if (!url) {
-          console.error('URL de consulta no generada.');
-          return;
-        }
-
+        const url = `${apiUrl}/shipments/shipments/user/${userId}`;
         const response = await axios.get<Shipment[]>(url, {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -104,10 +89,9 @@ export default function ShipmentTable() {
       }
     };
 
-    setFade(false); // Antes de traer nueva data
+    setFade(false);
     fetchShipments();
-  }, [activeTab]);
-
+  }, []);
 
   const handleCreate = () => {
     navigate('/create-shipment');
@@ -120,34 +104,14 @@ export default function ShipmentTable() {
 
   return (
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
-      {/* Tabs */}
-      <div className="flex justify-center space-x-4 p-4">
-        <Button
-          variant={activeTab === 'received' ? 'primary' : 'outline'}
-          size="sm"
-          onClick={() => setActiveTab('received')}
-        >
-          Recibidos
-        </Button>
-        <Button
-          variant={activeTab === 'sent' ? 'primary' : 'outline'}
-          size="sm"
-          onClick={() => setActiveTab('sent')}
-        >
-          Enviados
+      {/* Botón para crear envío */}
+      <div className="flex justify-end p-4">
+        <Button size="sm" variant="primary" onClick={handleCreate}>
+          Crear Envío
         </Button>
       </div>
 
-      {/* Botón para crear envío solo en enviados */}
-      {activeTab === 'sent' && (
-        <div className="flex justify-end p-4">
-          <Button size="sm" variant="primary" onClick={handleCreate}>
-            Crear Envío
-          </Button>
-        </div>
-      )}
-
-      {/* Tabla de envíos o Loading o No Envíos */}
+      {/* Tabla de envíos enviados */}
       <div
         className={`max-w-full overflow-x-auto p-4 transition-opacity duration-500 ${
           fade ? 'opacity-100' : 'opacity-0'
@@ -157,7 +121,7 @@ export default function ShipmentTable() {
           <div className="text-center text-gray-500 dark:text-white/70 p-8">Cargando envíos...</div>
         ) : shipments.length === 0 ? (
           <div className="text-center text-gray-500 dark:text-white/70 p-8">
-            No tienes {activeTab === 'sent' ? 'envíos enviados' : 'envíos recibidos'} aún.
+            No tienes envíos enviados aún.
           </div>
         ) : (
           <Table>
@@ -195,7 +159,6 @@ export default function ShipmentTable() {
                   <TableCell className="px-5 py-3 text-start text-gray-500 text-theme-sm dark:text-gray-400">{getProvinceName(shipment.shipment_destination)}</TableCell>
                   <TableCell className="px-5 py-3 text-start text-gray-500 text-theme-sm dark:text-white/90 font-medium">{shipment.shipment_sender_name}</TableCell>
                   <TableCell className="px-5 py-3 text-start text-gray-500 text-theme-sm dark:text-gray-400">{shipment.shipment_description}</TableCell>
-                  
                 </TableRow>
               ))}
             </TableBody>

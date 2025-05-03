@@ -61,10 +61,19 @@ export default function Home() {
     }
   };
 
+  const copyPhone = async () => {
+    try {
+      await navigator.clipboard.writeText("+1 (305) 592-4534");
+      alert("Teléfono copiado: +1 (305) 592-4534");
+    } catch (error) {
+      console.error("Error al copiar teléfono:", error);
+    }
+  };
+
   return (
     <>
       <PageMeta
-        title="Mi Perfil - PBE"
+        title="Mi Perfil - Get."
         description="Esta es la página de inicio mostrando la información del usuario en PBE."
       />
 
@@ -107,19 +116,30 @@ export default function Home() {
           {/* Card: Casillero en Estados Unidos */}
           <div className="bg-gray-100 dark:bg-gray-800 p-6 rounded-2xl shadow-sm">
             <h2 className="text-xl font-semibold text-gray-700 dark:text-white mb-4 flex items-center gap-2">
-               Dirección
+              Dirección
               <img
                 src="https://flagcdn.com/w40/us.png"
                 alt="Estados Unidos"
                 className="w-6 h-4 rounded-sm"
               />
             </h2>
-            <div className="text-gray-600 dark:text-white/90">
-              <p className="font-semibold">Dirección:</p>
-              <p>
-                {`${user?.user_prefix} ${user?.user_firstname || ""} ${user?.user_lastname || ""}`}<br />
-                7854 NW 46th St, Doral, FL 33166, USA
-              </p>
+            <div className="text-gray-600 dark:text-white/90 space-y-3">
+              <div>
+                <p className="font-semibold">Dirección:</p>
+                <p>
+                  {`${user?.user_prefix} ${user?.user_firstname || ""} ${user?.user_lastname || ""}`}<br />
+                  7854 NW 46th St, Doral, FL 33166, USA
+                </p>
+              </div>
+              <div>
+                <p className="font-semibold">Teléfono:</p>
+                <button
+                  onClick={copyPhone}
+                  className="hover:underline text-blue-600 dark:text-blue-400"
+                >
+                  +1 (305) 592-4534 (copy)
+                </button>
+              </div>
             </div>
           </div>
         </div>
