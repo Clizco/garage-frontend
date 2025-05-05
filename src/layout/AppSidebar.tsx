@@ -36,9 +36,7 @@ const navItems: NavItem[] = [
   {
     icon: <PlusIcon />,
     name: "Envios",
-    subItems: [{ name: "Enviados", path: "/shipments", pro: false, new: false }, { name: "Recibidos", path: "/shipments/received", pro: false, new: false }],
-    
-
+    subItems: [{ name: "Enviados", path: "/shipments", pro: false, new: false }, { name: "Recibidos", path: "/shipment-received", pro: false, new: false }],
   },
   {
     icon: <TableIcon />,

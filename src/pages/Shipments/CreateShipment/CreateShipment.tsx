@@ -69,10 +69,10 @@ const CreateShipment: React.FC = () => {
         shipment_sender_email: senderEmail,
         shipment_receiver_name: receiverName,
         shipment_receiver_phonenumber: receiverPhone,
-        shipment_receiver_email: receiverEmail,
         shipment_description: contentDescription,
         shipment_code: newShipmentCode,
         shipment_user: user?.id,
+        shipment_assigned_user: receiverEmail, // Se guarda aquí el correo del destinatario
       });
 
       console.log(response.data);
