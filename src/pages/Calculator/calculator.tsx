@@ -9,8 +9,8 @@ export default function Calculator() {
   const [price, setPrice] = useState<number | null>(null);
   const [unit, setUnit] = useState<'lb' | 'kg'>('lb');
 
-  const PRICE_PER_POUND = 2.0;
-  const PRICE_PER_KILO = 4.41;
+  const PRICE_PER_POUND = 3.50;
+  const PRICE_PER_KILO = 7.70;
 
   const handleWeightChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value.replace(/[^\d]/g, '');

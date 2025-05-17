@@ -30,6 +30,7 @@ import PackageTable from "./pages/Packages/PackagesTable";
 import CreatePackage from "./pages/Packages/CreatePackage/CreatePackage";
 import Calculator from "./pages/Calculator/calculator";
 import ShipmentReceived from "./pages/Shipments/ShipmentRecievedTable";
+import UpdatePackage from "./pages/Packages/UpdatePackage/UpdatePackage";
 
 export default function App() {
   return (
@@ -68,6 +69,7 @@ export default function App() {
             <Route path="/createaddress" element={<CreateAddress />} />
             <Route path="/packages" element={<PackageTable />} />
             <Route path="/create-package" element={<CreatePackage />} />
+            <Route path="/packages/edit/:id" element={<UpdatePackage />} />
             <Route path="/calculator" element={<Calculator />} />
 
 

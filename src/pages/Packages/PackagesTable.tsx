@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import {
@@ -72,6 +71,10 @@ export default function PackageTable() {
     navigate('/create-package');
   };
 
+  const handleEdit = (id: number) => {
+    navigate(`/packages/edit/${id}`);
+  };
+
   const handleDownloadInvoice = (invoicePath: string) => {
     const fullUrl = `${apiUrl}${invoicePath}`;
     window.open(fullUrl, '_blank');
@@ -95,6 +98,7 @@ export default function PackageTable() {
               <TableCell isHeader className="px-5 py-3 text-start text-gray-500 font-medium text-sm dark:text-gray-400">Estado</TableCell>
               <TableCell isHeader className="px-5 py-3 text-start text-gray-500 font-medium text-sm dark:text-gray-400">Factura</TableCell>
               <TableCell isHeader className="px-5 py-3 text-start text-gray-500 font-medium text-sm dark:text-gray-400">Productos</TableCell>
+              <TableCell isHeader className="px-5 py-3 text-start text-gray-500 font-medium text-sm dark:text-gray-400">Acciones</TableCell>
             </TableRow>
           </TableHeader>
 
@@ -145,6 +149,15 @@ export default function PackageTable() {
                     </tbody>
                   </table>
                 </TableCell>
+                <TableCell className="px-5 py-3 text-start">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleEdit(pkg.id)}
+                  >
+                    Editar
+                  </Button>
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -158,14 +171,22 @@ export default function PackageTable() {
             <p className="text-sm text-gray-600 dark:text-gray-300"><strong>Fecha:</strong> {formatDate(pkg.created_at)}</p>
             <p className="text-sm text-blue-600 dark:text-blue-400 font-medium"><strong>Tracking:</strong> {pkg.package_tracking_id}</p>
             <p className="text-sm text-gray-600 dark:text-gray-300">
-              <strong>Estado:</strong> <Badge size="sm" color={pkg.package_status === 'Active' ? 'success' : pkg.package_status === 'Pending' ? 'warning' : 'error'}>{pkg.package_status}</Badge>
+              <strong>Estado:</strong>{' '}
+              <Badge size="sm" color={pkg.package_status === 'Active' ? 'success' : pkg.package_status === 'Pending' ? 'warning' : 'error'}>
+                {pkg.package_status}
+              </Badge>
             </p>
             <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">
-              <strong>Factura:</strong> {pkg.invoice_path ? (
-                <Button size="sm" variant="outline" onClick={() => handleDownloadInvoice(pkg.invoice_path!)}>Descargar</Button>
-              ) : <span className="text-gray-400">Sin factura</span>}
+              <strong>Factura:</strong>{' '}
+              {pkg.invoice_path ? (
+                <Button size="sm" variant="outline" onClick={() => handleDownloadInvoice(pkg.invoice_path!)}>
+                  Descargar
+                </Button>
+              ) : (
+                <span className="text-gray-400">Sin factura</span>
+              )}
             </p>
-            <div className="space-y-2">
+            <div className="space-y-2 mb-2">
               {pkg.products.map((product, idx) => (
                 <div key={idx} className="border border-gray-200 dark:border-white/[0.1] p-2 rounded-md text-sm text-gray-800 dark:text-gray-100">
                   <p><strong>Peso:</strong> {product.product_weight} {product.product_unit}</p>
@@ -175,6 +196,9 @@ export default function PackageTable() {
                 </div>
               ))}
             </div>
+            <Button size="sm" variant="outline" onClick={() => handleEdit(pkg.id)}>
+              Editar
+            </Button>
           </div>
         ))}
       </div>
