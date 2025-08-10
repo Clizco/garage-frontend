@@ -1,16 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router";
-// Assume these icons are imported from an icon library
-import {
-  BoxCubeIcon,
-  ChevronDownIcon,
-  HorizontaLDots,
-  PlusIcon,
-  TableIcon,
-  LockIcon,
-  BoltIcon
-} from "../icons";
+import { ChevronDownIcon, HorizontaLDots } from "../icons";
 import { useSidebar } from "../context/SidebarContext";
+import { getRole } from "../utils/common";
+
+import {
+  Home,
+  ClipboardCheck,
+  ListChecks,
+} from "lucide-react";
 
 type NavItem = {
   name: string;
@@ -18,37 +16,6 @@ type NavItem = {
   path?: string;
   subItems?: { name: string; path: string; pro?: boolean; new?: boolean }[];
 };
-
-const navItems: NavItem[] = [
-  {
-    icon: <LockIcon />,
-    name: "Inicio",
-    path: "/",
-  },
-  {
-    icon: <BoxCubeIcon />,
-    name: "Paquetes",
-    path: "/packages",
-  },
-  {
-    icon: <PlusIcon />,
-    name: "Envios",
-    subItems: [
-      { name: "Enviados", path: "/shipments", pro: false, new: false },
-      { name: "Recibidos", path: "/shipment-received", pro: false, new: false }
-    ],
-  },
-  {
-    icon: <TableIcon />,
-    name: "Direcciones",
-    path: "/addresses",
-  },
-  {
-    icon: <BoltIcon />,
-    name: "Calculadora",
-    path: "/calculator",
-  },
-];
 
 const AppSidebar: React.FC = () => {
   const {
@@ -59,6 +26,40 @@ const AppSidebar: React.FC = () => {
     setIsMobileOpen,
   } = useSidebar();
   const location = useLocation();
+
+  const role = getRole(); // 👈 Rol actual (string)
+
+  const navItems: NavItem[] = [
+    {
+      icon: <Home className="w-5 h-5" />,
+      name: "Inicio",
+      path: "/",
+    },
+    ...(role === "guard"
+      ? [
+          {
+            icon: <ClipboardCheck className="w-5 h-5" />,
+            name: "Entradas / Salidas",
+            path: "/vehicle-inspection",
+          },
+          {
+            icon: <ListChecks className="w-5 h-5" />,
+            name: "Visitas",
+            path: "/observations",
+          },
+        ]
+      : []),
+    ...(role === "driver"
+      ? [
+         {
+            icon: <ClipboardCheck className="w-5 h-5" />,
+            name: "Rutas",
+            path: "/routes",
+          },
+          
+        ]
+      : []),
+  ];
 
   const [openSubmenu, setOpenSubmenu] = useState<{
     type: "main" | "others";
@@ -292,18 +293,8 @@ const AppSidebar: React.FC = () => {
               </h2>
               {renderMenuItems(navItems, "main")}
             </div>
-            <div className="">
-              <h2
-                className={`mb-4 text-xs uppercase flex leading-[20px] text-gray-400 ${
-                  !isExpanded && !isHovered
-                    ? "lg:justify-center"
-                    : "justify-start"
-                }`}
-              ></h2>
-            </div>
           </div>
         </nav>
-        {isExpanded || isHovered || isMobileOpen ? <div></div> : <></>}
       </div>
     </aside>
   );

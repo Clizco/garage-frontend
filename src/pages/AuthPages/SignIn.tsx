@@ -6,8 +6,8 @@ export default function SignIn() {
   return (
     <>
       <PageMeta
-        title="GET SignIn Dashboard"
-        description="Get SignIn Dashboard"
+        title="Koli - SignIn"
+        description="Inicia sesión en el sistema Koli"
       />
       <AuthLayout>
         <SignInForm />

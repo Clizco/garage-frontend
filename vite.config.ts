@@ -16,7 +16,7 @@ export default defineConfig({
   ],
   server: {
     host: true,
-    port: 5173,
-    allowedHosts: ['clizco-frontend.ngrok.io'],
+    port: 5174,
+    allowedHosts: ['frontend-koli.ngrok.app'],
   },
 });

@@ -1,3 +1,4 @@
+// IMPORTS (no cambian)
 import { useState, useEffect, ChangeEvent, FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -7,14 +8,9 @@ import Label from "../form/Label";
 import Input from "../form/input/InputField";
 import Checkbox from "../form/input/Checkbox";
 
+// CONSTANTES
 const apiUrl = import.meta.env.VITE_API_URL || '';
 const signupUrl = `${apiUrl}/users/signup/`;
-const provincesUrl = `${apiUrl}/provinces/provinces/all`;
-
-interface Province {
-  id: number;
-  province_name: string;
-}
 
 interface Errors {
   firstname?: string;
@@ -22,7 +18,6 @@ interface Errors {
   email?: string;
   password?: string;
   phone?: string;
-  province?: string;
 }
 
 const generateUniqueId = (): string => {
@@ -39,23 +34,12 @@ export default function SignUpForm() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [phone, setPhone] = useState("");
-  const [province, setProvince] = useState("");
-  const [provinces, setProvinces] = useState<Province[]>([]);
   const [user_unique_id, setUserUniqueId] = useState("");
   const [errors, setErrors] = useState<Errors>({});
   const [weakPassword, setWeakPassword] = useState(false);
   const [confirmError, setConfirmError] = useState("");
 
   useEffect(() => {
-    const fetchProvinces = async () => {
-      try {
-        const response = await axios.get<Province[]>(provincesUrl);
-        setProvinces(response.data);
-      } catch (error) {
-        console.error("Error fetching provinces:", error);
-      }
-    };
-    fetchProvinces();
     setUserUniqueId(generateUniqueId());
   }, []);
 
@@ -84,8 +68,6 @@ export default function SignUpForm() {
       newErrors.phone = "Only numbers allowed (max 8 digits)";
     }
 
-    if (!province) newErrors.province = "Province is required";
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0 && confirmPassword === password;
   };
@@ -101,9 +83,8 @@ export default function SignUpForm() {
         user_email: email,
         user_password: password,
         user_phonenumber: phone,
-        user_province: province,
         user_unique_id,
-        role_id: 2,
+        role_id: 4,
       });
       notifySuccess("¡Gracias por registrarte!");
       navigate("/");
@@ -125,10 +106,7 @@ export default function SignUpForm() {
   return (
     <div className="flex flex-col flex-1 w-full overflow-y-auto lg:w-1/2 no-scrollbar">
       <div className="w-full max-w-md mx-auto mb-5 sm:pt-10">
-        <Link
-          to="/"
-          className="inline-flex items-center text-sm text-gray-500 transition-colors hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
-        >
+        <Link to="/" className="inline-flex items-center text-sm text-gray-500 transition-colors hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">
           <ChevronLeftIcon className="size-5" />
           Back
         </Link>
@@ -209,23 +187,6 @@ export default function SignUpForm() {
                 placeholder="12345678"
               />
               {errors.phone && <p className="text-sm text-red-500">{errors.phone}</p>}
-            </div>
-
-            <div>
-              <Label>Province<span className="text-error-500">*</span></Label>
-              <select
-                className="w-full p-2 border rounded dark:bg-gray-800 dark:text-white"
-                value={province}
-                onChange={(e) => setProvince(e.target.value)}
-              >
-                <option value="">Select province</option>
-                {provinces.map((prov) => (
-                  <option key={prov.id} value={prov.id.toString()}>
-                    {prov.province_name}
-                  </option>
-                ))}
-              </select>
-              {errors.province && <p className="text-sm text-red-500">{errors.province}</p>}
             </div>
 
             <div className="flex items-center gap-3">

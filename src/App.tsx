@@ -22,15 +22,21 @@ import Home from "./pages/Dashboard/Home";
 import PublicRoutes from "./utils/publicRoutes";
 import PrivateRoutes from "./utils/privateRoutes";
 import InstallButton from "./components/installbutton/installbutton";
-import ShipmentTable from "./pages/Shipments/ShipmentTable";
-import CreateShipment from "./pages/Shipments/CreateShipment/CreateShipment";
-import AddressBook from "./pages/Adresses/AdressTable";
-import CreateAddress from "./pages/Adresses/CreateAdress/CreateAdress";
-import PackageTable from "./pages/Packages/PackagesTable";
-import CreatePackage from "./pages/Packages/CreatePackage/CreatePackage";
-import Calculator from "./pages/Calculator/calculator";
-import ShipmentReceived from "./pages/Shipments/ShipmentRecievedTable";
-import UpdatePackage from "./pages/Packages/UpdatePackage/UpdatePackage";
+import VehicleInspectionTable from "./pages/VehicleInspection/VehicleInspectionTable";
+import ExitOrderTable from "./pages/ExitOrder/ExitOrderTable";
+import CreateExitOrder from "./pages/ExitOrder/CreateExitOrder/CreateExitOrder";
+import UpdateExitOrder from "./pages/ExitOrder/UpdateExitOrder/UpdateExitOrder";
+import MilageTable from "./pages/Mileages/MileageTable";
+import CreateMilage from "./pages/Mileages/CreateMileages/CreateMileages";
+import UpdateMilage from "./pages/Mileages/UpdateMileages/UpdateMileages";
+import WorkshopReportTable from "./pages/WorkshopReport/WorkshopReportTable";
+import CreateWorkshopReport from "./pages/WorkshopReport/CreateWorkshopReport/CreateWorkshopReport";
+import RoutesTable from "./pages/Routes/RoutesTable";
+import CreateRoute from "./pages/Routes/CreateRoutes/CreateRoutes";
+import { GuardiaRoutes, ConductorRoutes } from "./utils/roleRoutes";
+import ObservationsTable from "./pages/Observations/ObservationsTable";
+import CreateObservationForm from "./pages/Observations/CreateObservations/CreateObservations";
+
 
 export default function App() {
   return (
@@ -57,21 +63,34 @@ export default function App() {
           <Route element={<AppLayout />}>
             {/* Dashboard */}
             <Route index path="/" element={<Home />} />
-
             {/* Otras páginas */}
             <Route path="/profile" element={<UserProfiles />} />
             <Route path="/calendar" element={<Calendar />} />
             <Route path="/blank" element={<Blank />} />
-            <Route path="/shipments" element={<ShipmentTable />} />
-            <Route path="/shipment-received" element={<ShipmentReceived />} />
-            <Route path="/create-shipment" element={<CreateShipment />} />
-            <Route path="/addresses" element={<AddressBook />} />
-            <Route path="/createaddress" element={<CreateAddress />} />
-            <Route path="/packages" element={<PackageTable />} />
-            <Route path="/create-package" element={<CreatePackage />} />
-            <Route path="/packages/edit/:id" element={<UpdatePackage />} />
-            <Route path="/calculator" element={<Calculator />} />
 
+           {/* Rutas solo para GUARDIAS (rol 4) */}
+            <Route element={<GuardiaRoutes />}>
+              <Route path="/vehicle-inspection" element={<VehicleInspectionTable />} />
+              <Route path="/exit-orders" element={<ExitOrderTable />} />
+              <Route path="/create-exit-order" element={<CreateExitOrder />} />
+              <Route path="/update-exit-order/:id" element={<UpdateExitOrder />} />
+              <Route path="/milages" element={<MilageTable />} />
+              <Route path="/create-milage" element={<CreateMilage />} />
+              <Route path="/update-milage/:id" element={<UpdateMilage />} />
+              <Route path="/workshop-reports" element={<WorkshopReportTable />} />
+              <Route path="/create-workshop-report" element={<CreateWorkshopReport />} />
+              <Route path="/observations" element={<ObservationsTable />} />
+              <Route path="/create-observation" element={<CreateObservationForm />} />
+            </Route>
+
+            {/* Rutas solo para CONDUCTORES (rol 3) */}
+            <Route element={<ConductorRoutes />}>
+              <Route path="/routes" element={<RoutesTable />} />
+              <Route path="/create-route" element={<CreateRoute />} />
+            </Route>
+
+
+          
 
             {/* Rutas anidadas */}
 
