@@ -42,7 +42,9 @@ export default function RoutesTable() {
   const fetchData = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await axios.get(`${apiUrl}/routes/routes/all`, {
+      const decodedToken = JSON.parse(localStorage.getItem("decodedToken") || "{}");
+      const userId = decodedToken.id || localStorage.getItem("userId");
+      const res = await axios.get(`${apiUrl}/routes/routes/user/${userId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setRutas(res.data);
