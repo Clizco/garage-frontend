@@ -14,8 +14,6 @@ import {
   Image as ImageIcon,
 } from "lucide-react";
 import Button from "../../components/ui/button/Button";
-// ⬇️ Eliminado Select porque quitamos el filtro de ordenamiento
-// import Select from "../../components/form/Select";
 
 const apiUrl = import.meta.env.VITE_API_URL || "";
 
@@ -49,14 +47,12 @@ interface Vehicle {
   seguro_pdf?: string | null;
 }
 
-type SortKey = "newest" | "brand" | "year"; // se mantiene por compatibilidad, pero no se muestra en UI
-
 type CartItem = {
   id: number;
   name: string;
   cover: string | null;
   quantitySelected: number;
-  price: number | null;
+  price: number | null; // EN VENTA usa precio_venta; ALQUILER -> null (demo)
   estado: EstadoVehiculo;
   placa: string;
 };
@@ -113,7 +109,6 @@ export default function EcommerceTable() {
   const [query, setQuery] = useState("");
   const [onlySale, setOnlySale] = useState(false);
   const [onlyRent, setOnlyRent] = useState(false);
-  const [sortKey] = useState<SortKey>("newest"); // ya no se muestra selector
 
   // paginación
   const [page, setPage] = useState(1);
@@ -127,10 +122,11 @@ export default function EcommerceTable() {
   const [cartOpen, setCartOpen] = useState(false);
   const [cart, setCart] = useState<CartItem[]>([]);
 
-  // bloquear scroll cuando el carrito o el modal están abiertos
+  // lock scroll cuando carrito o detalle están abiertos
   useEffect(() => {
+    const shouldLock = cartOpen || !!detalle;
     const prev = document.body.style.overflow;
-    document.body.style.overflow = cartOpen || !!detalle ? "hidden" : "";
+    document.body.style.overflow = shouldLock ? "hidden" : "";
     return () => {
       document.body.style.overflow = prev;
     };
@@ -160,7 +156,9 @@ export default function EcommerceTable() {
   // lista filtrada
   const filtered = useMemo(() => {
     let list = vehicles.filter(
-      (v) => (v.estado || "").toUpperCase() === "EN VENTA" || (v.estado || "").toUpperCase() === "ALQUILER"
+      (v) =>
+        (v.estado || "").toUpperCase() === "EN VENTA" ||
+        (v.estado || "").toUpperCase() === "ALQUILER"
     );
 
     if (onlySale) list = list.filter((v) => (v.estado || "").toUpperCase() === "EN VENTA");
@@ -178,14 +176,14 @@ export default function EcommerceTable() {
       );
     }
 
-    // se mantiene orden "newest" por defecto
+    // orden por defecto: más nuevos primero
     list.sort(
       (a, b) =>
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
 
     return list;
-  }, [vehicles, query, onlySale, onlyRent, sortKey]);
+  }, [vehicles, query, onlySale, onlyRent]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPageItems = useMemo(() => {
@@ -195,7 +193,7 @@ export default function EcommerceTable() {
 
   useEffect(() => {
     setPage(1);
-  }, [query, onlySale, onlyRent, sortKey]);
+  }, [query, onlySale, onlyRent]);
 
   // modal
   const openDetalle = (v: Vehicle) => {
@@ -219,7 +217,7 @@ export default function EcommerceTable() {
       name: `${v.marca || ""} ${v.modelo || ""} ${v.year || ""}`.trim(),
       cover,
       quantitySelected: 1,
-      price: salePrice,
+      price: salePrice, // null si es alquiler
       estado: (v.estado || "").toUpperCase(),
       placa: v.placa,
     };
@@ -295,12 +293,10 @@ export default function EcommerceTable() {
 
   return (
     <>
-      <PageMeta title="Inventario" description="" />
+      <PageMeta title="Vehículos" description="" />
 
-      <div className="p-4 md:p-6 space-y-6 transition-colors">
-        {/* ⛔ Encabezado removido */}
-
-        {/* Filtros */}
+      <div className="p-4 md:p-6 space-y-4 md:space-y-6 transition-colors">
+        {/* Filtros (sin texto de cabecera y sin select de ordenar) */}
         <section className="rounded-2xl border border-gray-200 dark:border-white/[0.06] bg-white dark:bg-white/[0.02] p-4 md:p-5 transition-colors">
           <div className="flex flex-col md:flex-row md:items-center gap-3">
             <div className="flex-1 relative">
@@ -334,7 +330,6 @@ export default function EcommerceTable() {
                 <span className="text-sm text-gray-700 dark:text-gray-200">Solo alquiler</span>
               </label>
 
-              {/* ⛔ Select de ordenamiento removido */}
               {/* Botón carrito */}
               <button
                 onClick={() => setCartOpen(true)}
@@ -422,7 +417,7 @@ export default function EcommerceTable() {
                         </div>
                       </button>
 
-                      {/* Contenido */}
+                      {/* Contenido (solo lo pedido) */}
                       <div className="p-3 flex flex-col gap-2 flex-1">
                         <div className="min-h-[40px]">
                           <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 line-clamp-2">
@@ -477,13 +472,16 @@ export default function EcommerceTable() {
 
       {/* ============== MODAL DETALLE ============== */}
       {detalle && (
-        <div className="fixed inset-0 z-50" aria-modal="true" role="dialog">
+        <div className="fixed inset-0 z-50 flex items-stretch md:items-start justify-center md:py-8" aria-modal="true" role="dialog">
+          {/* Backdrop */}
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={closeDetalle} />
-          <div className="relative mx-auto w-full max-w-5xl max-h-[92vh] mt-8 md:mt-16 px-4">
-            <div className="relative bg-white dark:bg-white/[0.03] rounded-2xl shadow-2xl border border-gray-200 dark:border-white/[0.05] overflow-hidden transition-colors">
-              <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-white/[0.05] transition-colors">
+          {/* Contenedor */}
+          <div className="relative w-full md:max-w-5xl h-full md:h-auto md:max-h-[92vh] px-0 md:px-4">
+            <div className="relative bg-white dark:bg-white/[0.03] md:rounded-2xl shadow-2xl border border-transparent md:border-gray-200 md:dark:border-white/[0.05] overflow-hidden transition-colors h-full md:h-auto flex flex-col">
+              {/* Header */}
+              <div className="sticky top-0 z-10 flex items-center justify-between px-4 md:px-5 py-4 border-b border-gray-200/70 dark:border-white/[0.08] bg-white/90 dark:bg-[#0b0b0b]/60 backdrop-blur">
                 <div className="min-w-0">
-                  <h2 className="text/base md:text-lg font-semibold text-gray-900 dark:text-gray-100 truncate">
+                  <h2 className="text-base md:text-lg font-semibold text-gray-900 dark:text-gray-100 truncate">
                     {detalle.marca} {detalle.modelo} {detalle.year}
                   </h2>
                   <div className="flex flex-wrap items-center gap-2 mt-1">
@@ -499,128 +497,160 @@ export default function EcommerceTable() {
                 </button>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-0 md:gap-6 p-4 md:p-6">
-                <div className="md:col-span-3">
-                  <div className="relative rounded-xl overflow-hidden bg-gray-50 dark:bg-white/[0.02] border border-gray-200 dark:border-white/[0.05] transition-colors">
-                    {getImages(detalle).length ? (
-                      <div className="aspect-square w-full flex items-center justify-center">
-                        <img
-                          key={activeIdx}
-                          src={imgUrl(getImages(detalle)[activeIdx])}
-                          alt={`vehicle-${detalle.id}-${activeIdx}`}
-                          className="h-full w-full object-contain md:object-cover"
-                        />
-                        {getImages(detalle).length > 1 && (
-                          <>
+              {/* Cuerpo scrollable */}
+              <div className="flex-1 overflow-y-auto overscroll-contain p-4 md:p-6">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4 md:gap-6">
+                  {/* Viewer principal */}
+                  <div className="md:col-span-3">
+                    <div className="relative rounded-xl overflow-hidden bg-gray-50 dark:bg-white/[0.02] border border-gray-200 dark:border-white/[0.05] transition-colors">
+                      {getImages(detalle).length ? (
+                        <div className="w-full h-[360px] md:h-auto md:aspect-square flex items-center justify-center">
+                          <img
+                            key={activeIdx}
+                            src={imgUrl(getImages(detalle)[activeIdx])}
+                            alt={`vehicle-${detalle.id}-${activeIdx}`}
+                            className="h-full w-full object-contain md:object-cover"
+                          />
+                          {getImages(detalle).length > 1 && (
+                            <>
+                              <button
+                                onClick={() =>
+                                  setActiveIdx((i) => {
+                                    const total = getImages(detalle).length;
+                                    return (i - 1 + total) % total;
+                                  })
+                                }
+                                className="absolute left-2 top-1/2 -translate-y-1/2 size-9 rounded-xl bg-black/40 text-white hover:bg-black/60 transition-colors"
+                                aria-label="Anterior"
+                              >
+                                ‹
+                              </button>
+                              <button
+                                onClick={() =>
+                                  setActiveIdx((i) => {
+                                    const total = getImages(detalle).length;
+                                    return (i + 1) % total;
+                                  })
+                                }
+                                className="absolute right-2 top-1/2 -translate-y-1/2 size-9 rounded-xl bg-black/40 text-white hover:bg-black/60 transition-colors"
+                                aria-label="Siguiente"
+                              >
+                                ›
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="w-full h-[360px] md:aspect-square flex items-center justify-center text-gray-400 dark:text-gray-300">
+                          <ImageIcon className="w-12 h-12" />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Miniaturas */}
+                    {getImages(detalle).length > 1 && (
+                      <>
+                        {/* Mobile: carrusel horizontal */}
+                        <div className="mt-3 flex gap-2 overflow-x-auto md:hidden snap-x snap-mandatory [-webkit-overflow-scrolling:touch]">
+                          {getImages(detalle).map((rel, i) => (
                             <button
-                              onClick={() =>
-                                setActiveIdx((i) => {
-                                  const total = getImages(detalle).length;
-                                  return (i - 1 + total) % total;
-                                })
-                              }
-                              className="absolute left-2 top-1/2 -translate-y-1/2 size-9 rounded-xl bg-black/40 text-white hover:bg-black/60 transition-colors"
-                              aria-label="Anterior"
+                              key={`${rel}-${i}`}
+                              onClick={() => setActiveIdx(i)}
+                              className={`relative snap-start shrink-0 w-24 aspect-square overflow-hidden rounded-lg border transition-colors ${
+                                i === activeIdx
+                                  ? "border-gray-400 dark:border-white/50"
+                                  : "border-gray-200 dark:border-white/10"
+                              }`}
+                              aria-label={`Miniatura ${i + 1}`}
                             >
-                              ‹
+                              <img
+                                src={imgUrl(rel)}
+                                alt={`thumb-${i}`}
+                                className="h-full w-full object-cover"
+                                loading="lazy"
+                              />
                             </button>
+                          ))}
+                        </div>
+
+                        {/* Desktop: grilla */}
+                        <div className="mt-3 hidden md:grid grid-cols-5 gap-2">
+                          {getImages(detalle).map((rel, i) => (
                             <button
-                              onClick={() =>
-                                setActiveIdx((i) => {
-                                  const total = getImages(detalle).length;
-                                  return (i + 1) % total;
-                                })
-                              }
-                              className="absolute right-2 top-1/2 -translate-y-1/2 size-9 rounded-xl bg-black/40 text-white hover:bg-black/60 transition-colors"
-                              aria-label="Siguiente"
+                              key={`${rel}-${i}`}
+                              onClick={() => setActiveIdx(i)}
+                              className={`relative aspect-square overflow-hidden rounded-lg border transition-colors ${
+                                i === activeIdx
+                                  ? "border-gray-400 dark:border-white/50"
+                                  : "border-gray-200 dark:border-white/10"
+                              }`}
+                              aria-label={`Miniatura ${i + 1}`}
                             >
-                              ›
+                              <img
+                                src={imgUrl(rel)}
+                                alt={`thumb-${i}`}
+                                className="h-full w-full object-cover"
+                                loading="lazy"
+                              />
                             </button>
-                          </>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="aspect-square w-full flex items-center justify-center text-gray-400 dark:text-gray-300">
-                        <ImageIcon className="w-12 h-12" />
-                      </div>
+                          ))}
+                        </div>
+                      </>
                     )}
                   </div>
 
-                  {getImages(detalle).length > 1 && (
-                    <div className="mt-3 grid grid-cols-5 sm:grid-cols-6 md:grid-cols-5 gap-2">
-                      {getImages(detalle).map((rel, i) => (
-                        <button
-                          key={`${rel}-${i}`}
-                          onClick={() => setActiveIdx(i)}
-                          className={`relative aspect-square overflow-hidden rounded-lg border transition-colors ${
-                            i === activeIdx
-                              ? "border-gray-400 dark:border-white/50"
-                              : "border-gray-200 dark:border-white/10"
-                          }`}
-                          aria-label={`Miniatura ${i + 1}`}
-                        >
-                          <img
-                            src={imgUrl(rel)}
-                            alt={`thumb-${i}`}
-                            className="h-full w-full object-cover"
-                            loading="lazy"
-                          />
-                        </button>
-                      ))}
+                  {/* Panel info (solo campos solicitados) */}
+                  <div className="md:col-span-2 flex flex-col gap-4">
+                    <div className="rounded-xl border border-gray-200 dark:border-white/[0.05] p-4 md:p-5 bg-gray-50/60 dark:bg-white/[0.02] transition-colors">
+                      <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">Información</h3>
+                      <dl className="space-y-3 text-sm">
+                        <div className="grid grid-cols-3 gap-2">
+                          <dt className="text-gray-600 dark:text-gray-300">Marca</dt>
+                          <dd className="col-span-2 text-gray-900 dark:text-gray-100">{detalle.marca}</dd>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2">
+                          <dt className="text-gray-600 dark:text-gray-300">Modelo</dt>
+                          <dd className="col-span-2 text-gray-900 dark:text-gray-100">{detalle.modelo}</dd>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2">
+                          <dt className="text-gray-600 dark:text-gray-300">Año</dt>
+                          <dd className="col-span-2 text-gray-900 dark:text-gray-100">{detalle.year}</dd>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2">
+                          <dt className="text-gray-600 dark:text-gray-300">Uso</dt>
+                          <dd className="col-span-2 text-gray-900 dark:text-gray-100">{detalle.uso || "—"}</dd>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2">
+                          <dt className="text-gray-600 dark:text-gray-300">Estado</dt>
+                          <dd className="col-span-2 text-gray-900 dark:text-gray-100">{(detalle.estado || "—").toString()}</dd>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2">
+                          <dt className="text-gray-600 dark:text-gray-300">
+                            {((detalle.estado || "").toUpperCase() === "ALQUILER") ? "Precio alquiler" : "Precio venta"}
+                          </dt>
+                          <dd className="col-span-2 text-gray-900 dark:text-gray-100">
+                            {priceLabel(detalle)}
+                          </dd>
+                        </div>
+                      </dl>
                     </div>
-                  )}
-                </div>
 
-                <div className="md:col-span-2 flex flex-col gap-4">
-                  <div className="rounded-xl border border-gray-200 dark:border-white/[0.05] p-4 md:p-5 bg-gray-50/60 dark:bg-white/[0.02] transition-colors">
-                    <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">
-                      Información
-                    </h3>
-                    <dl className="space-y-3 text-sm">
-                      <div className="grid grid-cols-3 gap-2">
-                        <dt className="text-gray-600 dark:text-gray-300">Marca</dt>
-                        <dd className="col-span-2 text-gray-900 dark:text-gray-100">{detalle.marca}</dd>
-                      </div>
-                      <div className="grid grid-cols-3 gap-2">
-                        <dt className="text-gray-600 dark:text-gray-300">Modelo</dt>
-                        <dd className="col-span-2 text-gray-900 dark:text-gray-100">{detalle.modelo}</dd>
-                      </div>
-                      <div className="grid grid-cols-3 gap-2">
-                        <dt className="text-gray-600 dark:text-gray-300">Año</dt>
-                        <dd className="col-span-2 text-gray-900 dark:text-gray-100">{detalle.year}</dd>
-                      </div>
-                      <div className="grid grid-cols-3 gap-2">
-                        <dt className="text-gray-600 dark:text-gray-300">Uso</dt>
-                        <dd className="col-span-2 text-gray-900 dark:text-gray-100">{detalle.uso || "—"}</dd>
-                      </div>
-                      <div className="grid grid-cols-3 gap-2">
-                        <dt className="text-gray-600 dark:text-gray-300">Estado</dt>
-                        <dd className="col-span-2 text-gray-900 dark:text-gray-100">{(detalle.estado || "—").toString()}</dd>
-                      </div>
-                      <div className="grid grid-cols-3 gap-2">
-                        <dt className="text-gray-600 dark:text-gray-300">
-                          {((detalle.estado || "").toUpperCase() === "ALQUILER") ? "Precio alquiler" : "Precio venta"}
-                        </dt>
-                        <dd className="col-span-2 text-gray-900 dark:text-gray-100">
-                          {priceLabel(detalle)}
-                        </dd>
-                      </div>
-                    </dl>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <Button size="sm" onClick={() => addToCart(detalle)} className="flex-1">
-                      <ShoppingCart className="w-4 h-4 mr-1" />
-                      {((detalle.estado || "").toUpperCase() === "ALQUILER") ? "Solicitar alquiler (demo)" : "Agregar (demo)"}
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={() => setCartOpen(true)} className="flex-1">
-                      Ver carrito
-                    </Button>
+                    {/* Acciones */}
+                    <div className="flex items-center gap-2">
+                      <Button size="sm" onClick={() => addToCart(detalle)} className="flex-1">
+                        <ShoppingCart className="w-4 h-4 mr-1" />
+                        {((detalle.estado || "").toUpperCase() === "ALQUILER") ? "Solicitar alquiler (demo)" : "Agregar (demo)"}
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => setCartOpen(true)} className="flex-1">
+                        Ver carrito
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div className="sticky bottom-0 bg-white/90 dark:bg-white/10 backdrop-blur border-t border-gray-100 dark:border-white/[0.05] px-5 py-3 flex items-center justify-end gap-2 transition-colors">
+              {/* Footer */}
+              <div className="sticky bottom-0 bg-white/90 dark:bg-white/10 backdrop-blur border-t border-gray-100 dark:border-white/[0.05] px-4 md:px-5 py-3 flex items-center justify-end gap-2 transition-colors pb-[env(safe-area-inset-bottom)]">
                 <Button variant="outline" size="sm" onClick={closeDetalle}>
                   Cerrar
                 </Button>
@@ -631,142 +661,146 @@ export default function EcommerceTable() {
       )}
 
       {/* ============== DRAWER CARRITO (demo) ============== */}
-      {cartOpen && (
-        <div className="fixed inset-0 z-[120] isolation-isolate">
-          {/* Overlay */}
-          <div
-            className="absolute inset-0 z-[110] bg-black/40 transition-opacity duration-300 opacity-100"
-            onClick={() => setCartOpen(false)}
-          />
-          {/* Panel */}
-          <aside
-            className="absolute right-0 top-0 h-[100svh] w-[90vw] sm:w-[420px]
-            bg-white dark:bg-[#0b0b0b] border-l border-gray-200 dark:border-white/10
-            shadow-xl transform transition-transform duration-300 translate-x-0
-            z-[120] pointer-events-auto flex flex-col"
-          >
-            {/* Header */}
-            <div className="shrink-0 flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-white/10 transition-colors">
-              <div className="flex items-center gap-2">
-                <ShoppingCart className="w-5 h-5 text-gray-800 dark:text-gray-100" />
-                <h3 className="font-semibold text-gray-800 dark:text-gray-100">Tu carrito (demo)</h3>
-                {!!totalItems && (
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-blue-600 text-white">{totalItems}</span>
-                )}
-              </div>
-              <button
-                onClick={() => setCartOpen(false)}
-                className="size-9 inline-flex items-center justify-center rounded-xl hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
-                aria-label="Cerrar carrito"
-              >
-                <X className="w-4 h-4 text-gray-800 dark:text-gray-100" />
-              </button>
-            </div>
-
-            {/* Contenido */}
-            <div className="flex-1 overflow-y-auto p-3">
-              {cart.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center text-center text-gray-500 dark:text-gray-300">
-                  <ShoppingCart className="w-10 h-10 mb-2" />
-                  Tu carrito está vacío.
-                </div>
-              ) : (
-                <ul className="space-y-3">
-                  {cart.map((item) => {
-                    const unit = typeof item.price === "number" ? item.price : null;
-                    const line = unit ? unit * item.quantitySelected : null;
-                    return (
-                      <li
-                        key={item.id}
-                        className="rounded-xl border border-gray-200 dark:border-white/10 p-3 flex gap-3 transition-colors"
-                      >
-                        <div className="size-16 rounded-lg overflow-hidden bg-gray-100 dark:bg-white/10 flex-shrink-0">
-                          {item.cover ? (
-                            <img src={buildFileUrl(item.cover)} className="h-full w-full object-cover" alt={item.name} />
-                          ) : (
-                            <div className="h-full w-full flex items-center justify-center">
-                              <ImageIcon className="w-6 h-6 text-gray-400 dark:text-gray-300" />
-                            </div>
-                          )}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="min-w-0">
-                              <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
-                                {item.name}
-                              </p>
-                              <p className="text-[12px] text-gray-800 dark:text-gray-100 mt-1">
-                                {item.estado === "ALQUILER" ? "Consultar precio de alquiler" : `Precio: ${currencyFmt.format(item.price || 0)}`}
-                              </p>
-                              <p className="text-[12px] text-gray-800 dark:text-gray-100">
-                                Subtotal: {item.estado === "ALQUILER" ? "—" : currencyFmt.format(line || 0)}
-                              </p>
-                            </div>
-                            <button
-                              onClick={() => removeFromCart(item.id)}
-                              className="size-8 inline-flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
-                              title="Quitar"
-                            >
-                              <Trash2 className="w-4 h-4 text-gray-800 dark:text-gray-100" />
-                            </button>
-                          </div>
-
-                          {/* Cantidad (demo) */}
-                          <div className="mt-2 flex items-center gap-2">
-                            <button
-                              onClick={() => decQty(item.id)}
-                              className="size-8 inline-flex items-center justify-center rounded-lg border border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10 transition-colors"
-                              title="Menos"
-                            >
-                              <Minus className="w-4 h-4 text-gray-800 dark:text-gray-100" />
-                            </button>
-                            <input
-                              type="number"
-                              min={1}
-                              value={item.quantitySelected}
-                              onChange={(e) => setItemQty(item.id, Number(e.target.value || 1))}
-                              className="w-14 text-center px-2 py-1 rounded-lg border border-gray-200 dark:border-white/10 bg-transparent text-gray-800 dark:text-gray-100 transition-colors"
-                            />
-                            <button
-                              onClick={() => incQty(item.id)}
-                              className="size-8 inline-flex items-center justify-center rounded-lg border border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10 transition-colors"
-                              title="Más"
-                            >
-                              <Plus className="w-4 h-4 text-gray-800 dark:text-gray-100" />
-                            </button>
-                          </div>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
+      <div
+        className={`fixed inset-0 z-[120] isolation-isolate ${cartOpen ? "" : "pointer-events-none"}`}
+        aria-hidden={!cartOpen}
+      >
+        {/* Overlay */}
+        <div
+          className={`absolute inset-0 z-[110] bg-black/40 transition-opacity duration-300 ${
+            cartOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+          }`}
+          onClick={() => setCartOpen(false)}
+        />
+        {/* Panel */}
+        <aside
+          className={`absolute right-0 top-0 h-[100svh] w-[90vw] sm:w-[420px]
+          bg-white dark:bg-[#0b0b0b] border-l border-gray-200 dark:border-white/10
+          shadow-xl transform transition-transform duration-300
+          ${cartOpen ? "translate-x-0" : "translate-x-full"}
+          z-[120] pointer-events-auto flex flex-col`}
+        >
+          {/* Header */}
+          <div className="shrink-0 flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-white/10 transition-colors">
+            <div className="flex items-center gap-2">
+              <ShoppingCart className="w-5 h-5 text-gray-800 dark:text-gray-100" />
+              <h3 className="font-semibold text-gray-800 dark:text-gray-100">Tu carrito (demo)</h3>
+              {!!totalItems && (
+                <span className="text-xs px-2 py-0.5 rounded-full bg-blue-600 text-white">{totalItems}</span>
               )}
             </div>
+            <button
+              onClick={() => setCartOpen(false)}
+              className="size-9 inline-flex items-center justify-center rounded-xl hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
+              aria-label="Cerrar carrito"
+            >
+              <X className="w-4 h-4 text-gray-800 dark:text-gray-100" />
+            </button>
+          </div>
 
-            {/* Footer */}
-            <div className="shrink-0 border-t border-gray-200 dark:border-white/10 p-3 transition-colors">
-              <div className="flex items-center justify-between text-sm mb-1">
-                <span className="text-gray-600 dark:text-gray-300">Ítems</span>
-                <span className="font-semibold text-gray-900 dark:text-gray-100">{totalItems}</span>
+          {/* Contenido */}
+          <div className="flex-1 overflow-y-auto p-3">
+            {cart.length === 0 ? (
+              <div className="h-full flex flex-col items-center justify-center text-center text-gray-500 dark:text-gray-300">
+                <ShoppingCart className="w-10 h-10 mb-2" />
+                Tu carrito está vacío.
               </div>
-              <div className="flex items-center justify-between text-sm mb-3">
-                <span className="text-gray-800 dark:text-gray-100 font-medium">Total</span>
-                <span className="text-base font-semibold text-gray-900 dark:text-gray-100">
-                  {currencyFmt.format(totalAmount)}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={clearCart} disabled={cart.length === 0} className="flex-1">
-                  Vaciar
-                </Button>
-                <Button size="sm" onClick={handleCheckout} disabled={cart.length === 0} className="flex-1">
-                  Continuar (demo)
-                </Button>
-              </div>
+            ) : (
+              <ul className="space-y-3">
+                {cart.map((item) => {
+                  const unit = typeof item.price === "number" ? item.price : null;
+                  const line = unit ? unit * item.quantitySelected : null;
+                  return (
+                    <li
+                      key={item.id}
+                      className="rounded-xl border border-gray-200 dark:border-white/10 p-3 flex gap-3 transition-colors"
+                    >
+                      <div className="size-16 rounded-lg overflow-hidden bg-gray-100 dark:bg-white/10 flex-shrink-0">
+                        {item.cover ? (
+                          <img src={buildFileUrl(item.cover)} className="h-full w-full object-cover" alt={item.name} />
+                        ) : (
+                          <div className="h-full w-full flex items-center justify-center">
+                            <ImageIcon className="w-6 h-6 text-gray-400 dark:text-gray-300" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
+                              {item.name}
+                            </p>
+                            <p className="text-[12px] text-gray-800 dark:text-gray-100 mt-1">
+                              {item.estado === "ALQUILER" ? "Consultar precio de alquiler" : `Precio: ${currencyFmt.format(unit || 0)}`}
+                            </p>
+                            <p className="text-[12px] text-gray-800 dark:text-gray-100">
+                              Subtotal: {item.estado === "ALQUILER" ? "—" : currencyFmt.format(line || 0)}
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => removeFromCart(item.id)}
+                            className="size-8 inline-flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
+                            title="Quitar"
+                          >
+                            <Trash2 className="w-4 h-4 text-gray-800 dark:text-gray-100" />
+                          </button>
+                        </div>
+
+                        {/* Cantidad (demo) */}
+                        <div className="mt-2 flex items-center gap-2">
+                          <button
+                            onClick={() => decQty(item.id)}
+                            className="size-8 inline-flex items-center justify-center rounded-lg border border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10 transition-colors"
+                            title="Menos"
+                          >
+                            <Minus className="w-4 h-4 text-gray-800 dark:text-gray-100" />
+                          </button>
+                          <input
+                            type="number"
+                            min={1}
+                            value={item.quantitySelected}
+                            onChange={(e) => setItemQty(item.id, Number(e.target.value || 1))}
+                            className="w-14 text-center px-2 py-1 rounded-lg border border-gray-200 dark:border-white/10 bg-transparent text-gray-800 dark:text-gray-100 transition-colors"
+                          />
+                          <button
+                            onClick={() => incQty(item.id)}
+                            className="size-8 inline-flex items-center justify-center rounded-lg border border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10 transition-colors"
+                            title="Más"
+                          >
+                            <Plus className="w-4 h-4 text-gray-800 dark:text-gray-100" />
+                          </button>
+                        </div>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="shrink-0 border-t border-gray-200 dark:border-white/10 p-3 transition-colors">
+            <div className="flex items-center justify-between text-sm mb-1">
+              <span className="text-gray-600 dark:text-gray-300">Ítems</span>
+              <span className="font-semibold text-gray-900 dark:text-gray-100">{totalItems}</span>
             </div>
-          </aside>
-        </div>
-      )}
+            <div className="flex items-center justify-between text-sm mb-3">
+              <span className="text-gray-800 dark:text-gray-100 font-medium">Total</span>
+              <span className="text-base font-semibold text-gray-900 dark:text-gray-100">
+                {currencyFmt.format(totalAmount)}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={clearCart} disabled={cart.length === 0} className="flex-1">
+                Vaciar
+              </Button>
+              <Button size="sm" onClick={handleCheckout} disabled={cart.length === 0} className="flex-1">
+                Continuar (demo)
+              </Button>
+            </div>
+          </div>
+        </aside>
+      </div>
     </>
   );
 }
