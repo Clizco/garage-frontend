@@ -36,6 +36,7 @@ import CreateRoute from "./pages/Routes/CreateRoutes/CreateRoutes";
 import { GuardiaRoutes, ConductorRoutes } from "./utils/roleRoutes";
 import ObservationsTable from "./pages/Observations/ObservationsTable";
 import CreateObservationForm from "./pages/Observations/CreateObservations/CreateObservations";
+import EcommerceTable from "./pages/Ecommerce/EcommerceTable";
 
 
 export default function App() {
@@ -118,6 +119,7 @@ export default function App() {
         <Route element={<PublicRoutes />}>
           <Route path="/signin" element={<SignIn />} />
           <Route path="/signup" element={<SignUp />} />
+          <Route path="/ecommerce" element={<EcommerceTable />} />
         </Route>
 
         {/* Ruta de error (404) */}
