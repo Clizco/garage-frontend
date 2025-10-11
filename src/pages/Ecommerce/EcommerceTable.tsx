@@ -169,10 +169,11 @@ export default function EcommerceTable() {
       const q = query.toLowerCase();
       list = list.filter(
         (v) =>
-          (v.placa || "").toLowerCase().includes(q) ||
           (v.marca || "").toLowerCase().includes(q) ||
           (v.modelo || "").toLowerCase().includes(q) ||
-          (v.vin || "").toLowerCase().includes(q)
+          String(v.year || "").toLowerCase().includes(q) ||
+          (v.uso || "").toLowerCase().includes(q) ||
+          (v.estado || "").toLowerCase().includes(q)
       );
     }
 
@@ -284,7 +285,7 @@ export default function EcommerceTable() {
   const priceLabel = (v: Vehicle) => {
     const est = (v.estado || "").toUpperCase();
     if (est === "EN VENTA") return fmtPrice(v.precio_venta);
-    if (est === "ALQUILER") return fmtPrice(v.precio); // muestra precio base (o cámbialo por tarifa)
+    if (est === "ALQUILER") return "Consultar precio de alquiler";
     return "—";
   };
 
@@ -325,7 +326,7 @@ export default function EcommerceTable() {
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Buscar por placa, marca, modelo o VIN…"
+                placeholder="Buscar por marca, modelo, año, uso o estado…"
                 className="w-full pl-9 pr-3 py-2 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-transparent text-gray-800 dark:text-gray-100 transition-colors"
               />
             </div>
@@ -445,33 +446,26 @@ export default function EcommerceTable() {
                           </div>
                         )}
 
-                        {/* Badges */}
+                        {/* Estado */}
                         <div className="absolute top-2 left-2 flex flex-col gap-1">
                           {estadoBadge(v.estado)}
-                          <span className="text-[11px] px-2 py-0.5 rounded-full bg-black/60 text-white backdrop-blur border border-white/10">
-                            {v.placa}
-                          </span>
                         </div>
                       </button>
 
-                      {/* Contenido */}
+                      {/* Contenido (solo Marca, Modelo, Año, Uso, Estado + precio regla) */}
                       <div className="p-3 flex flex-col gap-2 flex-1">
                         <div className="min-h-[40px]">
                           <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 line-clamp-2">
                             {v.marca} {v.modelo} {v.year}
                           </h3>
-                          <p className="text-xs text-gray-500 dark:text-gray-300 line-clamp-2">
-                            {v.uso || "—"}
+                          <p className="text-xs text-gray-500 dark:text-gray-300">
+                            Uso: {v.uso || "—"}
                           </p>
                         </div>
 
-                        {/* Precio */}
                         <div className="mt-auto">
                           <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                             {priceLabel(v)}
-                          </p>
-                          <p className="text-[11px] text-gray-600 dark:text-gray-300">
-                            Propietario: {v.propietario}
                           </p>
                         </div>
                       </div>
@@ -527,9 +521,6 @@ export default function EcommerceTable() {
                   </h2>
                   <div className="flex flex-wrap items-center gap-2 mt-1">
                     {estadoBadge(detalle.estado)}
-                    <span className="text-[11px] px-2 py-0.5 rounded-full bg-black/60 text-white backdrop-blur border border-white/10">
-                      {detalle.placa}
-                    </span>
                   </div>
                 </div>
                 <button
@@ -616,7 +607,7 @@ export default function EcommerceTable() {
                   )}
                 </div>
 
-                {/* Panel info */}
+                {/* Panel info: SOLO Marca, Modelo, Año, Uso, Estado + precio/regla */}
                 <div className="md:col-span-2 flex flex-col gap-4">
                   <div className="rounded-xl border border-gray-200 dark:border-white/[0.05] p-4 md:p-5 bg-gray-50/60 dark:bg-white/[0.02] transition-colors">
                     <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">
@@ -624,35 +615,33 @@ export default function EcommerceTable() {
                     </h3>
                     <dl className="space-y-3 text-sm">
                       <div className="grid grid-cols-3 gap-2">
+                        <dt className="text-gray-600 dark:text-gray-300">Marca</dt>
+                        <dd className="col-span-2 text-gray-900 dark:text-gray-100">{detalle.marca}</dd>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2">
+                        <dt className="text-gray-600 dark:text-gray-300">Modelo</dt>
+                        <dd className="col-span-2 text-gray-900 dark:text-gray-100">{detalle.modelo}</dd>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2">
+                        <dt className="text-gray-600 dark:text-gray-300">Año</dt>
+                        <dd className="col-span-2 text-gray-900 dark:text-gray-100">{detalle.year}</dd>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2">
+                        <dt className="text-gray-600 dark:text-gray-300">Uso</dt>
+                        <dd className="col-span-2 text-gray-900 dark:text-gray-100">{detalle.uso || "—"}</dd>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2">
                         <dt className="text-gray-600 dark:text-gray-300">Estado</dt>
                         <dd className="col-span-2 text-gray-900 dark:text-gray-100">{(detalle.estado || "—").toString()}</dd>
                       </div>
                       <div className="grid grid-cols-3 gap-2">
-                        <dt className="text-gray-600 dark:text-gray-300">Precio</dt>
-                        <dd className="col-span-2 text-gray-900 dark:text-gray-100">{priceLabel(detalle)}</dd>
+                        <dt className="text-gray-600 dark:text-gray-300">
+                          {((detalle.estado || "").toUpperCase() === "ALQUILER") ? "Precio alquiler" : "Precio venta"}
+                        </dt>
+                        <dd className="col-span-2 text-gray-900 dark:text-gray-100">
+                          {priceLabel(detalle)}
+                        </dd>
                       </div>
-                      <div className="grid grid-cols-3 gap-2">
-                        <dt className="text-gray-600 dark:text-gray-300">Toneladas</dt>
-                        <dd className="col-span-2 text-gray-900 dark:text-gray-100">{detalle.ton || "—"}</dd>
-                      </div>
-                      <div className="grid grid-cols-3 gap-2">
-                        <dt className="text-gray-600 dark:text-gray-300">Capacidad</dt>
-                        <dd className="col-span-2 text-gray-900 dark:text-gray-100">{detalle.capacidad || "—"}</dd>
-                      </div>
-                      <div className="grid grid-cols-3 gap-2">
-                        <dt className="text-gray-600 dark:text-gray-300">Ubicación</dt>
-                        <dd className="col-span-2 text-gray-900 dark:text-gray-100">{detalle.ubicacion}</dd>
-                      </div>
-                      <div className="grid grid-cols-3 gap-2">
-                        <dt className="text-gray-600 dark:text-gray-300">Placa</dt>
-                        <dd className="col-span-2 text-gray-900 dark:text-gray-100">{detalle.placa}</dd>
-                      </div>
-                      {detalle.vin && (
-                        <div className="grid grid-cols-3 gap-2">
-                          <dt className="text-gray-600 dark:text-gray-300">VIN</dt>
-                          <dd className="col-span-2 text-gray-900 dark:text-gray-100">{detalle.vin}</dd>
-                        </div>
-                      )}
                     </dl>
                   </div>
 
@@ -750,18 +739,17 @@ export default function EcommerceTable() {
                             <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
                               {item.name}
                             </p>
-                            <p className="text-[11px] text-gray-500 dark:text-gray-300">Placa: {item.placa}</p>
-                            <p className="text-[11px] text-gray-500 dark:text-gray-300">Estado: {item.estado}</p>
+                            {/* En el carrito ya no mostramos más que la regla de precio */}
                             <p className="text-[12px] text-gray-800 dark:text-gray-100 mt-1">
-                              Precio: {unit === null ? "Cotizar" : currencyFmt.format(unit)}
+                              {item.estado === "ALQUILER" ? "Consultar precio de alquiler" : `Precio: ${currencyFmt.format(item.price || 0)}`}
                             </p>
                             <p className="text-[12px] text-gray-800 dark:text-gray-100">
-                              Subtotal: {line === null ? "—" : currencyFmt.format(line)}
+                              Subtotal: {item.estado === "ALQUILER" ? "—" : currencyFmt.format(line || 0)}
                             </p>
                           </div>
                           <button
                             onClick={() => removeFromCart(item.id)}
-                            className="size-8 inline-flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
+                            className="size-8 inline-flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg:white/10 transition-colors"
                             title="Quitar"
                           >
                             <Trash2 className="w-4 h-4 text-gray-800 dark:text-gray-100" />
