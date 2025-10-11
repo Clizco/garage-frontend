@@ -14,6 +14,7 @@ import {
   Image as ImageIcon,
 } from "lucide-react";
 import Button from "../../components/ui/button/Button";
+import Select from "../../components/form/Select";
 
 const apiUrl = import.meta.env.VITE_API_URL || "";
 
@@ -38,14 +39,16 @@ interface Vehicle {
   created_at: string;
 
   // precios/estado
-  precio: number | string;
-  precio_venta?: number | string;
+  precio: number | string;        // precio base existente
+  precio_venta?: number | string; // precio para "EN VENTA"
   estado?: EstadoVehiculo;
 
   // media
   vehicle_images?: string[] | string | null;
   seguro_pdf?: string | null;
 }
+
+type SortKey = "newest" | "brand" | "year";
 
 type CartItem = {
   id: number;
@@ -109,6 +112,7 @@ export default function EcommerceTable() {
   const [query, setQuery] = useState("");
   const [onlySale, setOnlySale] = useState(false);
   const [onlyRent, setOnlyRent] = useState(false);
+  const [sortKey, setSortKey] = useState<SortKey>("brand"); // por marca por defecto
 
   // paginación
   const [page, setPage] = useState(1);
@@ -122,11 +126,11 @@ export default function EcommerceTable() {
   const [cartOpen, setCartOpen] = useState(false);
   const [cart, setCart] = useState<CartItem[]>([]);
 
-  // lock scroll cuando carrito o detalle están abiertos
+  // lock scroll cuando el carrito o modal está abierto
   useEffect(() => {
-    const shouldLock = cartOpen || !!detalle;
+    const block = cartOpen || !!detalle;
     const prev = document.body.style.overflow;
-    document.body.style.overflow = shouldLock ? "hidden" : "";
+    document.body.style.overflow = block ? "hidden" : "";
     return () => {
       document.body.style.overflow = prev;
     };
@@ -156,9 +160,7 @@ export default function EcommerceTable() {
   // lista filtrada
   const filtered = useMemo(() => {
     let list = vehicles.filter(
-      (v) =>
-        (v.estado || "").toUpperCase() === "EN VENTA" ||
-        (v.estado || "").toUpperCase() === "ALQUILER"
+      (v) => (v.estado || "").toUpperCase() === "EN VENTA" || (v.estado || "").toUpperCase() === "ALQUILER"
     );
 
     if (onlySale) list = list.filter((v) => (v.estado || "").toUpperCase() === "EN VENTA");
@@ -176,14 +178,23 @@ export default function EcommerceTable() {
       );
     }
 
-    // orden por defecto: más nuevos primero
-    list.sort(
-      (a, b) =>
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-    );
+    switch (sortKey) {
+      case "brand":
+        list.sort((a, b) => (a.marca || "").localeCompare(b.marca || ""));
+        break;
+      case "year":
+        list.sort((a, b) => (b.year || 0) - (a.year || 0));
+        break;
+      case "newest":
+      default:
+        list.sort(
+          (a, b) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+    }
 
     return list;
-  }, [vehicles, query, onlySale, onlyRent]);
+  }, [vehicles, query, onlySale, onlyRent, sortKey]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPageItems = useMemo(() => {
@@ -193,7 +204,7 @@ export default function EcommerceTable() {
 
   useEffect(() => {
     setPage(1);
-  }, [query, onlySale, onlyRent]);
+  }, [query, onlySale, onlyRent, sortKey]);
 
   // modal
   const openDetalle = (v: Vehicle) => {
@@ -217,7 +228,7 @@ export default function EcommerceTable() {
       name: `${v.marca || ""} ${v.modelo || ""} ${v.year || ""}`.trim(),
       cover,
       quantitySelected: 1,
-      price: salePrice, // null si es alquiler
+      price: salePrice, // null si es alquiler (solo demo)
       estado: (v.estado || "").toUpperCase(),
       placa: v.placa,
     };
@@ -293,10 +304,10 @@ export default function EcommerceTable() {
 
   return (
     <>
-      <PageMeta title="Vehículos" description="" />
+      <PageMeta title="Tienda de Vehículos" description="Explora vehículos en venta y en alquiler." />
 
-      <div className="p-4 md:p-6 space-y-4 md:space-y-6 transition-colors">
-        {/* Filtros (sin texto de cabecera y sin select de ordenar) */}
+      <div className="p-4 md:p-6 space-y-6 transition-colors">
+        {/* Filtros (sin título descriptivo) */}
         <section className="rounded-2xl border border-gray-200 dark:border-white/[0.06] bg-white dark:bg-white/[0.02] p-4 md:p-5 transition-colors">
           <div className="flex flex-col md:flex-row md:items-center gap-3">
             <div className="flex-1 relative">
@@ -329,6 +340,19 @@ export default function EcommerceTable() {
                 />
                 <span className="text-sm text-gray-700 dark:text-gray-200">Solo alquiler</span>
               </label>
+
+              {/* Orden (sin “Más recientes”) */}
+              <div className="flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-transparent transition-colors">
+                <Select
+                  defaultValue={sortKey}
+                  onChange={(val) => setSortKey(val as SortKey)}
+                  className="bg-transparent outline-none text-sm text-gray-700 dark:text-gray-200"
+                  options={[
+                    { value: "brand", label: "Marca (A-Z)" },
+                    { value: "year", label: "Año (Mayor-Menor)" },
+                  ]}
+                />
+              </div>
 
               {/* Botón carrito */}
               <button
@@ -406,7 +430,7 @@ export default function EcommerceTable() {
                             )}
                           </>
                         ) : (
-                          <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="absolute inset-0 flex items-center justify-center bg-gray-50 dark:bg-white/[0.03]">
                             <ImageIcon className="w-10 h-10 text-gray-400 dark:text-gray-500" />
                           </div>
                         )}
@@ -417,7 +441,7 @@ export default function EcommerceTable() {
                         </div>
                       </button>
 
-                      {/* Contenido (solo lo pedido) */}
+                      {/* Contenido (solo campos requeridos) */}
                       <div className="p-3 flex flex-col gap-2 flex-1">
                         <div className="min-h-[40px]">
                           <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 line-clamp-2">
@@ -470,16 +494,30 @@ export default function EcommerceTable() {
         </section>
       </div>
 
-      {/* ============== MODAL DETALLE ============== */}
+      {/* ============== MODAL DETALLE (mobile-first, scroll perfecto) ============== */}
       {detalle && (
-        <div className="fixed inset-0 z-50 flex items-stretch md:items-start justify-center md:py-8" aria-modal="true" role="dialog">
+        <div
+          className="fixed inset-0 z-50 flex justify-center items-stretch md:items-start"
+          role="dialog"
+          aria-modal="true"
+        >
           {/* Backdrop */}
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={closeDetalle} />
-          {/* Contenedor */}
-          <div className="relative w-full md:max-w-5xl h-full md:h-auto md:max-h-[92vh] px-0 md:px-4">
-            <div className="relative bg-white dark:bg-white/[0.03] md:rounded-2xl shadow-2xl border border-transparent md:border-gray-200 md:dark:border-white/[0.05] overflow-hidden transition-colors h-full md:h-auto flex flex-col">
-              {/* Header */}
-              <div className="sticky top-0 z-10 flex items-center justify-between px-4 md:px-5 py-4 border-b border-gray-200/70 dark:border-white/[0.08] bg-white/90 dark:bg-[#0b0b0b]/60 backdrop-blur">
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={closeDetalle}
+          />
+          {/* Contenedor modal: ocupa alto completo en móvil; con safe-areas */}
+          <div
+            className="relative w-full max-w-5xl h-[100dvh] md:h-auto md:max-h-[92vh] md:mt-8 px-0 md:px-4"
+            style={{
+              paddingTop: "max(env(safe-area-inset-top),0px)",
+              paddingBottom: "max(env(safe-area-inset-bottom),0px)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="relative flex h-full md:max-h-[92vh] flex-col bg-white dark:bg-white/[0.03] rounded-none md:rounded-2xl shadow-2xl border border-gray-200 dark:border-white/[0.05] overflow-hidden transition-colors">
+              {/* Header fijo dentro del modal */}
+              <div className="shrink-0 flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-white/[0.05]">
                 <div className="min-w-0">
                   <h2 className="text-base md:text-lg font-semibold text-gray-900 dark:text-gray-100 truncate">
                     {detalle.marca} {detalle.modelo} {detalle.year}
@@ -498,111 +536,89 @@ export default function EcommerceTable() {
               </div>
 
               {/* Cuerpo scrollable */}
-              <div className="flex-1 overflow-y-auto overscroll-contain p-4 md:p-6">
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-4 md:gap-6">
+              <div className="grow overflow-y-auto px-4 md:px-6 py-4">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-0 md:gap-6">
                   {/* Viewer principal */}
                   <div className="md:col-span-3">
-                    <div className="relative rounded-xl overflow-hidden bg-gray-50 dark:bg-white/[0.02] border border-gray-200 dark:border-white/[0.05] transition-colors">
+                    <div className="relative rounded-xl overflow-hidden bg-gray-50 dark:bg-white/[0.02] border border-gray-200 dark:border-white/[0.05]">
                       {getImages(detalle).length ? (
-                        <div className="w-full h-[360px] md:h-auto md:aspect-square flex items-center justify-center">
+                        <div className="w-full">
                           <img
                             key={activeIdx}
                             src={imgUrl(getImages(detalle)[activeIdx])}
                             alt={`vehicle-${detalle.id}-${activeIdx}`}
-                            className="h-full w-full object-contain md:object-cover"
+                            className="w-full h-auto object-contain md:object-cover"
                           />
-                          {getImages(detalle).length > 1 && (
-                            <>
-                              <button
-                                onClick={() =>
-                                  setActiveIdx((i) => {
-                                    const total = getImages(detalle).length;
-                                    return (i - 1 + total) % total;
-                                  })
-                                }
-                                className="absolute left-2 top-1/2 -translate-y-1/2 size-9 rounded-xl bg-black/40 text-white hover:bg-black/60 transition-colors"
-                                aria-label="Anterior"
-                              >
-                                ‹
-                              </button>
-                              <button
-                                onClick={() =>
-                                  setActiveIdx((i) => {
-                                    const total = getImages(detalle).length;
-                                    return (i + 1) % total;
-                                  })
-                                }
-                                className="absolute right-2 top-1/2 -translate-y-1/2 size-9 rounded-xl bg-black/40 text-white hover:bg-black/60 transition-colors"
-                                aria-label="Siguiente"
-                              >
-                                ›
-                              </button>
-                            </>
-                          )}
                         </div>
                       ) : (
-                        <div className="w-full h-[360px] md:aspect-square flex items-center justify-center text-gray-400 dark:text-gray-300">
+                        <div className="w-full min-h-[240px] md:min-h-[360px] flex items-center justify-center text-gray-400 dark:text-gray-300">
                           <ImageIcon className="w-12 h-12" />
                         </div>
                       )}
+
+                      {/* Flechas solo si hay varias */}
+                      {getImages(detalle).length > 1 && (
+                        <>
+                          <button
+                            onClick={() =>
+                              setActiveIdx((i) => {
+                                const total = getImages(detalle).length;
+                                return (i - 1 + total) % total;
+                              })
+                            }
+                            className="absolute left-2 top-1/2 -translate-y-1/2 size-9 rounded-xl bg-black/40 text-white hover:bg-black/60 transition-colors"
+                            aria-label="Anterior"
+                          >
+                            ‹
+                          </button>
+                          <button
+                            onClick={() =>
+                              setActiveIdx((i) => {
+                                const total = getImages(detalle).length;
+                                return (i + 1) % total;
+                              })
+                            }
+                            className="absolute right-2 top-1/2 -translate-y-1/2 size-9 rounded-xl bg-black/40 text-white hover:bg-black/60 transition-colors"
+                            aria-label="Siguiente"
+                          >
+                            ›
+                          </button>
+                        </>
+                      )}
                     </div>
 
-                    {/* Miniaturas */}
+                    {/* Miniaturas: scroll horizontal en mobile */}
                     {getImages(detalle).length > 1 && (
-                      <>
-                        {/* Mobile: carrusel horizontal */}
-                        <div className="mt-3 flex gap-2 overflow-x-auto md:hidden snap-x snap-mandatory [-webkit-overflow-scrolling:touch]">
-                          {getImages(detalle).map((rel, i) => (
-                            <button
-                              key={`${rel}-${i}`}
-                              onClick={() => setActiveIdx(i)}
-                              className={`relative snap-start shrink-0 w-24 aspect-square overflow-hidden rounded-lg border transition-colors ${
-                                i === activeIdx
-                                  ? "border-gray-400 dark:border-white/50"
-                                  : "border-gray-200 dark:border-white/10"
-                              }`}
-                              aria-label={`Miniatura ${i + 1}`}
-                            >
-                              <img
-                                src={imgUrl(rel)}
-                                alt={`thumb-${i}`}
-                                className="h-full w-full object-cover"
-                                loading="lazy"
-                              />
-                            </button>
-                          ))}
-                        </div>
-
-                        {/* Desktop: grilla */}
-                        <div className="mt-3 hidden md:grid grid-cols-5 gap-2">
-                          {getImages(detalle).map((rel, i) => (
-                            <button
-                              key={`${rel}-${i}`}
-                              onClick={() => setActiveIdx(i)}
-                              className={`relative aspect-square overflow-hidden rounded-lg border transition-colors ${
-                                i === activeIdx
-                                  ? "border-gray-400 dark:border-white/50"
-                                  : "border-gray-200 dark:border-white/10"
-                              }`}
-                              aria-label={`Miniatura ${i + 1}`}
-                            >
-                              <img
-                                src={imgUrl(rel)}
-                                alt={`thumb-${i}`}
-                                className="h-full w-full object-cover"
-                                loading="lazy"
-                              />
-                            </button>
-                          ))}
-                        </div>
-                      </>
+                      <div className="mt-3 flex md:grid md:grid-cols-5 gap-2 overflow-x-auto scrollbar-none">
+                        {getImages(detalle).map((rel, i) => (
+                          <button
+                            key={`${rel}-${i}`}
+                            onClick={() => setActiveIdx(i)}
+                            className={`relative shrink-0 size-16 md:size-auto md:aspect-square overflow-hidden rounded-lg border transition-colors ${
+                              i === activeIdx
+                                ? "border-gray-400 dark:border-white/50"
+                                : "border-gray-200 dark:border-white/10"
+                            }`}
+                            aria-label={`Miniatura ${i + 1}`}
+                          >
+                            <img
+                              src={imgUrl(rel)}
+                              alt={`thumb-${i}`}
+                              className="h-full w-full object-cover"
+                              loading="lazy"
+                            />
+                          </button>
+                        ))}
+                      </div>
                     )}
                   </div>
 
-                  {/* Panel info (solo campos solicitados) */}
+                  {/* Panel info */}
                   <div className="md:col-span-2 flex flex-col gap-4">
-                    <div className="rounded-xl border border-gray-200 dark:border-white/[0.05] p-4 md:p-5 bg-gray-50/60 dark:bg-white/[0.02] transition-colors">
-                      <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">Información</h3>
+                    <div className="rounded-xl border border-gray-200 dark:border-white/[0.05] p-4 md:p-5 bg-gray-50/60 dark:bg-white/[0.02]">
+                      <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">
+                        Información
+                      </h3>
                       <dl className="space-y-3 text-sm">
                         <div className="grid grid-cols-3 gap-2">
                           <dt className="text-gray-600 dark:text-gray-300">Marca</dt>
@@ -634,24 +650,23 @@ export default function EcommerceTable() {
                         </div>
                       </dl>
                     </div>
-
-                    {/* Acciones */}
-                    <div className="flex items-center gap-2">
-                      <Button size="sm" onClick={() => addToCart(detalle)} className="flex-1">
-                        <ShoppingCart className="w-4 h-4 mr-1" />
-                        {((detalle.estado || "").toUpperCase() === "ALQUILER") ? "Solicitar alquiler (demo)" : "Agregar (demo)"}
-                      </Button>
-                      <Button variant="outline" size="sm" onClick={() => setCartOpen(true)} className="flex-1">
-                        Ver carrito
-                      </Button>
-                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Footer */}
-              <div className="sticky bottom-0 bg-white/90 dark:bg-white/10 backdrop-blur border-t border-gray-100 dark:border-white/[0.05] px-4 md:px-5 py-3 flex items-center justify-end gap-2 transition-colors pb-[env(safe-area-inset-bottom)]">
-                <Button variant="outline" size="sm" onClick={closeDetalle}>
+              {/* Footer fijo del modal (con safe-area bottom) */}
+              <div
+                className="shrink-0 bg-white/90 dark:bg-white/10 backdrop-blur border-t border-gray-100 dark:border-white/[0.05] px-4 md:px-5 py-3 flex items-center justify-end gap-2"
+                style={{ paddingBottom: "calc(0.5rem + env(safe-area-inset-bottom, 0px))" }}
+              >
+                <Button size="sm" onClick={() => addToCart(detalle)} className="flex-1 md:flex-none md:min-w-[180px]">
+                  <ShoppingCart className="w-4 h-4 mr-1" />
+                  {((detalle.estado || "").toUpperCase() === "ALQUILER") ? "Solicitar alquiler (demo)" : "Agregar (demo)"}
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setCartOpen(true)} className="flex-1 md:flex-none md:min-w-[140px]">
+                  Ver carrito
+                </Button>
+                <Button variant="outline" size="sm" onClick={closeDetalle} className="hidden md:inline-flex">
                   Cerrar
                 </Button>
               </div>
@@ -662,13 +677,13 @@ export default function EcommerceTable() {
 
       {/* ============== DRAWER CARRITO (demo) ============== */}
       <div
-        className={`fixed inset-0 z-[120] isolation-isolate ${cartOpen ? "" : "pointer-events-none"}`}
+        className={`fixed inset-0 z-[120] isolation-isolate pointer-events-none ${cartOpen ? "" : ""}`}
         aria-hidden={!cartOpen}
       >
         {/* Overlay */}
         <div
           className={`absolute inset-0 z-[110] bg-black/40 transition-opacity duration-300 ${
-            cartOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+            cartOpen ? "opacity-100 pointer-events-auto" : "opacity-0"
           }`}
           onClick={() => setCartOpen(false)}
         />
@@ -679,6 +694,9 @@ export default function EcommerceTable() {
           shadow-xl transform transition-transform duration-300
           ${cartOpen ? "translate-x-0" : "translate-x-full"}
           z-[120] pointer-events-auto flex flex-col`}
+          style={{
+            paddingBottom: "max(env(safe-area-inset-bottom),0px)",
+          }}
         >
           {/* Header */}
           <div className="shrink-0 flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-white/10 transition-colors">
@@ -731,7 +749,7 @@ export default function EcommerceTable() {
                               {item.name}
                             </p>
                             <p className="text-[12px] text-gray-800 dark:text-gray-100 mt-1">
-                              {item.estado === "ALQUILER" ? "Consultar precio de alquiler" : `Precio: ${currencyFmt.format(unit || 0)}`}
+                              {item.estado === "ALQUILER" ? "Consultar precio de alquiler" : `Precio: ${currencyFmt.format(item.price || 0)}`}
                             </p>
                             <p className="text-[12px] text-gray-800 dark:text-gray-100">
                               Subtotal: {item.estado === "ALQUILER" ? "—" : currencyFmt.format(line || 0)}
@@ -779,7 +797,10 @@ export default function EcommerceTable() {
           </div>
 
           {/* Footer */}
-          <div className="shrink-0 border-t border-gray-200 dark:border-white/10 p-3 transition-colors">
+          <div
+            className="shrink-0 border-t border-gray-200 dark:border-white/10 p-3 transition-colors"
+            style={{ paddingBottom: "max(env(safe-area-inset-bottom),0px)" }}
+          >
             <div className="flex items-center justify-between text-sm mb-1">
               <span className="text-gray-600 dark:text-gray-300">Ítems</span>
               <span className="font-semibold text-gray-900 dark:text-gray-100">{totalItems}</span>
