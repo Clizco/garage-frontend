@@ -1,6 +1,6 @@
 // EcommerceTable.tsx
 import PageMeta from "../../components/common/PageMeta";
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import axios from "axios";
 import {
   ShoppingCart,
@@ -9,8 +9,6 @@ import {
   Plus,
   Minus,
   Trash2,
-  ChevronLeft,
-  ChevronRight,
   Image as ImageIcon,
 } from "lucide-react";
 import Button from "../../components/ui/button/Button";
@@ -55,10 +53,21 @@ type CartItem = {
   name: string;
   cover: string | null;
   quantitySelected: number;
-  price: number | null; // EN VENTA usa precio_venta; ALQUILER -> null (demo)
+  price: number | null; // EN VENTA usa precio_venta; ALQUILER -> null (solo demo)
   estado: EstadoVehiculo;
   placa: string;
 };
+
+/** ====== Taller ====== */
+interface WorkshopReport {
+  id: number;
+  vehicle_id: number;
+  report_date: string;         // YYYY-MM-DD o ISO
+  report_time: string;         // HH:mm (opcional)
+  report_details: string;
+  report_part_details: string;
+  created_at: string;
+}
 
 /** ================== Helpers ================== */
 
@@ -102,6 +111,17 @@ const fmtPrice = (v?: number | string | null): string => {
   return n === null ? "—" : currencyFmt.format(n);
 };
 
+/** Une y normaliza los textos del reporte */
+const buildWorkshopDescription = (r?: Partial<WorkshopReport> | null): string => {
+  if (!r) return "";
+  const base = (r.report_details || "").trim();
+  const parts = (r.report_part_details || "").trim();
+  if (base && parts) return `${base} — Partes: ${parts}`;
+  if (base) return base;
+  if (parts) return `Partes: ${parts}`;
+  return "";
+};
+
 /** ================== Componente ================== */
 
 export default function EcommerceTable() {
@@ -114,9 +134,11 @@ export default function EcommerceTable() {
   const [onlyRent, setOnlyRent] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>("brand"); // por marca por defecto
 
-  // paginación
-  const [page, setPage] = useState(1);
+  // "infinite scroll"
   const PAGE_SIZE = 12;
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const [isPaging, setIsPaging] = useState(false);
 
   // modal detalle
   const [detalle, setDetalle] = useState<Vehicle | null>(null);
@@ -125,6 +147,9 @@ export default function EcommerceTable() {
   // carrito (demo)
   const [cartOpen, setCartOpen] = useState(false);
   const [cart, setCart] = useState<CartItem[]>([]);
+
+  // ===== Taller: mapa vehicle_id -> último reporte (descripcion consolidada) =====
+  const [lastWorkshopByVehicle, setLastWorkshopByVehicle] = useState<Record<number, WorkshopReport | undefined>>({});
 
   // lock scroll cuando el carrito o modal está abierto
   useEffect(() => {
@@ -136,21 +161,48 @@ export default function EcommerceTable() {
     };
   }, [cartOpen, detalle]);
 
-  // fetch
+  // fetch vehículos + últimos reportes de taller
   useEffect(() => {
     (async () => {
       try {
         const headers = { Authorization: `Bearer ${localStorage.getItem("token")}` };
-        const { data } = await axios.get(`${apiUrl}/vehicles/vehicles/all`, { headers });
-        const list: Vehicle[] = Array.isArray(data) ? data : [];
+
+        // Traemos ambos en paralelo sin cambiar tu lógica de vehículos
+        const [vehRes, wrRes] = await Promise.all([
+          axios.get(`${apiUrl}/vehicles/vehicles/all`, { headers }),
+          axios.get(`${apiUrl}/workshop-reports/workshop-reports/all`, { headers }).catch(() => ({ data: [] }))
+        ]);
+
+        // Vehículos
+        const list: Vehicle[] = Array.isArray(vehRes.data) ? vehRes.data : [];
         setVehicles(
           list.sort(
             (a, b) =>
               new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
           )
         );
+
+        // Reports -> quedarnos con el MÁS RECIENTE por vehicle_id
+        const reports: WorkshopReport[] = Array.isArray(wrRes.data) ? wrRes.data : [];
+        const map: Record<number, WorkshopReport> = {};
+        for (const r of reports) {
+          const key = r.vehicle_id;
+          const prev = map[key];
+          const asTS = (x?: WorkshopReport) => {
+            if (!x) return -Infinity;
+            // prioridad: report_date + report_time, si no created_at
+            const dt = x.report_date ? `${x.report_date}T${x.report_time || "00:00"}` : x.created_at;
+            const t = new Date(dt).getTime();
+            return Number.isFinite(t) ? t : -Infinity;
+          };
+          if (!prev || asTS(r) > asTS(prev)) {
+            map[key] = r;
+          }
+        }
+        setLastWorkshopByVehicle(map);
+
       } catch (e) {
-        console.error("Error al obtener vehículos:", e);
+        console.error("Error al obtener datos:", e);
       } finally {
         setLoading(false);
       }
@@ -168,13 +220,12 @@ export default function EcommerceTable() {
 
     if (query.trim()) {
       const q = query.toLowerCase();
-      list = list.filter(
-        (v) =>
-          (v.marca || "").toLowerCase().includes(q) ||
-          (v.modelo || "").toLowerCase().includes(q) ||
-          String(v.year || "").toLowerCase().includes(q) ||
-          (v.uso || "").toLowerCase().includes(q) ||
-          (v.estado || "").toLowerCase().includes(q)
+      list = list.filter((v) =>
+        (v.marca || "").toLowerCase().includes(q) ||
+        (v.modelo || "").toLowerCase().includes(q) ||
+        String(v.year || "").toLowerCase().includes(q) ||
+        (v.uso || "").toLowerCase().includes(q) ||
+        (v.estado || "").toLowerCase().includes(q)
       );
     }
 
@@ -196,15 +247,44 @@ export default function EcommerceTable() {
     return list;
   }, [vehicles, query, onlySale, onlyRent, sortKey]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const currentPageItems = useMemo(() => {
-    const start = (page - 1) * PAGE_SIZE;
-    return filtered.slice(start, start + PAGE_SIZE);
-  }, [filtered, page]);
+  // visible items (infinite)
+  const visibleItems = useMemo(
+    () => filtered.slice(0, Math.min(visibleCount, filtered.length)),
+    [filtered, visibleCount]
+  );
+  const hasMore = visibleItems.length < filtered.length;
 
+  // reset del contador al cambiar filtros/búsqueda/orden
   useEffect(() => {
-    setPage(1);
+    setVisibleCount(PAGE_SIZE);
   }, [query, onlySale, onlyRent, sortKey]);
+
+  // IntersectionObserver para "infinite scroll"
+  useEffect(() => {
+    if (!sentinelRef.current) return;
+    if (!hasMore || loading) return;
+
+    const node = sentinelRef.current;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        const [entry] = entries;
+        if (entry.isIntersecting && !isPaging) {
+          setIsPaging(true);
+          setTimeout(() => {
+            setVisibleCount((prev) => prev + PAGE_SIZE);
+            setIsPaging(false);
+          }, 0);
+        }
+      },
+      {
+        root: null,
+        rootMargin: "400px 0px",
+        threshold: 0,
+      }
+    );
+    obs.observe(node);
+    return () => obs.disconnect();
+  }, [hasMore, loading, isPaging]);
 
   // modal
   const openDetalle = (v: Vehicle) => {
@@ -391,10 +471,13 @@ export default function EcommerceTable() {
           ) : filtered.length ? (
             <>
               <ul className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
-                {currentPageItems.map((v) => {
+                {visibleItems.map((v) => {
                   const imgs = getImages(v);
                   const cover = imgs[0] || null;
-                  const hasMore = imgs.length > 1;
+                  const hasMoreImgs = imgs.length > 1;
+
+                  
+                  
 
                   return (
                     <li
@@ -414,12 +497,12 @@ export default function EcommerceTable() {
                               src={imgUrl(cover)}
                               alt={`${v.marca} ${v.modelo}`}
                               className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-300 ${
-                                hasMore ? "opacity-100 group-hover:opacity-0" : ""
+                                hasMoreImgs ? "opacity-100 group-hover:opacity-0" : ""
                               }`}
                               loading="lazy"
                               decoding="async"
                             />
-                            {hasMore && (
+                            {hasMoreImgs && (
                               <img
                                 src={imgUrl(imgs[1])}
                                 alt={`${v.marca} ${v.modelo}-alt`}
@@ -441,7 +524,7 @@ export default function EcommerceTable() {
                         </div>
                       </button>
 
-                      {/* Contenido (solo campos requeridos) */}
+                      {/* Contenido (solo campos requeridos + (opcional) 1 línea de taller) */}
                       <div className="p-3 flex flex-col gap-2 flex-1">
                         <div className="min-h-[40px]">
                           <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 line-clamp-2">
@@ -450,6 +533,13 @@ export default function EcommerceTable() {
                           <p className="text-xs text-gray-500 dark:text-gray-300">
                             Uso: {v.uso || "—"}
                           </p>
+
+                          {/* (OPCIONAL) Muestra primera línea de taller en la card */}
+                          {/* {workshopDesc && (
+                            <p className="text-[11px] text-gray-600 dark:text-gray-300 line-clamp-1 mt-1">
+                              {workshopDesc}
+                            </p>
+                          )} */}
                         </div>
 
                         <div className="mt-auto">
@@ -463,28 +553,15 @@ export default function EcommerceTable() {
                 })}
               </ul>
 
-              {/* Paginación */}
-              <div className="mt-6 flex items-center justify-center gap-2">
-                <button
-                  disabled={page <= 1}
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  className="inline-flex items-center gap-1 px-3 py-2 rounded-xl border border-gray-200 dark:border-white/10 disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-white/10 transition-colors"
-                >
-                  <ChevronLeft className="w-4 h-4" />{" "}
-                  <span className="text-gray-800 dark:text-gray-100">Anterior</span>
-                </button>
-                <span className="text-sm text-gray-700 dark:text-gray-200">
-                  Página {page} de {totalPages}
-                </span>
-                <button
-                  disabled={page >= totalPages}
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  className="inline-flex items-center gap-1 px-3 py-2 rounded-xl border border-gray-200 dark:border-white/10 disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-white/10 transition-colors"
-                >
-                  <span className="text-gray-800 dark:text-gray-100">Siguiente</span>{" "}
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
+              {/* Sentinel para infinite scroll */}
+              <div ref={sentinelRef} className="h-8 w-full"></div>
+
+              {/* Indicador de carga de más (cuando aún hay más por mostrar) */}
+              {hasMore && (
+                <div className="mt-2 text-center text-xs text-gray-500 dark:text-gray-400">
+                  Cargando más…
+                </div>
+              )}
             </>
           ) : (
             <div className="text-center text-sm text-gray-600 dark:text-gray-300 py-20">
@@ -506,7 +583,7 @@ export default function EcommerceTable() {
             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             onClick={closeDetalle}
           />
-          {/* Contenedor modal: ocupa alto completo en móvil; con safe-areas */}
+          {/* Contenedor modal */}
           <div
             className="relative w-full max-w-5xl h-[100dvh] md:h-auto md:max-h-[92vh] md:mt-8 px-0 md:px-4"
             style={{
@@ -516,7 +593,7 @@ export default function EcommerceTable() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="relative flex h-full md:max-h-[92vh] flex-col bg-white dark:bg-white/[0.03] rounded-none md:rounded-2xl shadow-2xl border border-gray-200 dark:border-white/[0.05] overflow-hidden transition-colors">
-              {/* Header fijo dentro del modal */}
+              {/* Header */}
               <div className="shrink-0 flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-white/[0.05]">
                 <div className="min-w-0">
                   <h2 className="text-base md:text-lg font-semibold text-gray-900 dark:text-gray-100 truncate">
@@ -551,12 +628,11 @@ export default function EcommerceTable() {
                           />
                         </div>
                       ) : (
-                        <div className="w-full min-h-[240px] md:min-h-[360px] flex items-center justify-center text-gray-400 dark:text-gray-300">
+                        <div className="w-full min-h-[240px] md:minh-[360px] flex items-center justify-center text-gray-400 dark:text-gray-300">
                           <ImageIcon className="w-12 h-12" />
                         </div>
                       )}
 
-                      {/* Flechas solo si hay varias */}
                       {getImages(detalle).length > 1 && (
                         <>
                           <button
@@ -587,7 +663,7 @@ export default function EcommerceTable() {
                       )}
                     </div>
 
-                    {/* Miniaturas: scroll horizontal en mobile */}
+                    {/* Miniaturas */}
                     {getImages(detalle).length > 1 && (
                       <div className="mt-3 flex md:grid md:grid-cols-5 gap-2 overflow-x-auto scrollbar-none">
                         {getImages(detalle).map((rel, i) => (
@@ -648,13 +724,23 @@ export default function EcommerceTable() {
                             {priceLabel(detalle)}
                           </dd>
                         </div>
+
+                        {/* Descripción del taller (si existe) */}
+                        {lastWorkshopByVehicle[detalle.id] && buildWorkshopDescription(lastWorkshopByVehicle[detalle.id]) && (
+                          <div className="grid grid-cols-3 gap-2">
+                            <dt className="text-gray-600 dark:text-gray-300">Descripcion</dt>
+                            <dd className="col-span-2 text-gray-900 dark:text-gray-100 whitespace-pre-wrap">
+                              {buildWorkshopDescription(lastWorkshopByVehicle[detalle.id])}
+                            </dd>
+                          </div>
+                        )}
                       </dl>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Footer fijo del modal (con safe-area bottom) */}
+              {/* Footer */}
               <div
                 className="shrink-0 bg-white/90 dark:bg-white/10 backdrop-blur border-t border-gray-100 dark:border-white/[0.05] px-4 md:px-5 py-3 flex items-center justify-end gap-2"
                 style={{ paddingBottom: "calc(0.5rem + env(safe-area-inset-bottom, 0px))" }}
