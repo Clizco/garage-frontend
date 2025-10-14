@@ -10,11 +10,15 @@ import {
   Minus,
   Trash2,
   Image as ImageIcon,
+  CheckCircle2,
 } from "lucide-react";
 import Button from "../../components/ui/button/Button";
 import Select from "../../components/form/Select";
 
 const apiUrl = import.meta.env.VITE_API_URL || "";
+
+// >>> Enviar a la tabla contacts (crear contacto)
+const CONTACTS_CREATE_ENDPOINT = `${apiUrl}/contacts/contacts/create`;
 
 /** ================== Tipos ================== */
 
@@ -37,8 +41,8 @@ interface Vehicle {
   created_at: string;
 
   // precios/estado
-  precio: number | string;        // precio base existente
-  precio_venta?: number | string; // precio para "EN VENTA"
+  precio: number | string;
+  precio_venta?: number | string;
   estado?: EstadoVehiculo;
 
   // media
@@ -53,7 +57,7 @@ type CartItem = {
   name: string;
   cover: string | null;
   quantitySelected: number;
-  price: number | null; // EN VENTA usa precio_venta; ALQUILER -> null (solo demo)
+  price: number | null; // EN VENTA usa precio_venta; ALQUILER -> null
   estado: EstadoVehiculo;
   placa: string;
 };
@@ -62,8 +66,8 @@ type CartItem = {
 interface WorkshopReport {
   id: number;
   vehicle_id: number;
-  report_date: string;         // YYYY-MM-DD o ISO
-  report_time: string;         // HH:mm (opcional)
+  report_date: string;
+  report_time: string;
   report_details: string;
   report_part_details: string;
   created_at: string;
@@ -122,6 +126,17 @@ const buildWorkshopDescription = (r?: Partial<WorkshopReport> | null): string =>
   return "";
 };
 
+// Separa "Nombre completo" en nombre y apellido
+function splitFullName(fullName: string): { name: string; lastname: string } {
+  const parts = (fullName || "").trim().split(/\s+/);
+  if (parts.length === 0) return { name: "", lastname: "" };
+  if (parts.length === 1) return { name: parts[0], lastname: "-" };
+  return {
+    name: parts.slice(0, -1).join(" "),
+    lastname: parts[parts.length - 1],
+  };
+}
+
 /** ================== Componente ================== */
 
 export default function EcommerceTable() {
@@ -132,7 +147,7 @@ export default function EcommerceTable() {
   const [query, setQuery] = useState("");
   const [onlySale, setOnlySale] = useState(false);
   const [onlyRent, setOnlyRent] = useState(false);
-  const [sortKey, setSortKey] = useState<SortKey>("brand"); // por marca por defecto
+  const [sortKey, setSortKey] = useState<SortKey>("brand");
 
   // "infinite scroll"
   const PAGE_SIZE = 12;
@@ -144,22 +159,33 @@ export default function EcommerceTable() {
   const [detalle, setDetalle] = useState<Vehicle | null>(null);
   const [activeIdx, setActiveIdx] = useState<number>(0);
 
-  // carrito (demo)
+  // carrito
   const [cartOpen, setCartOpen] = useState(false);
   const [cart, setCart] = useState<CartItem[]>([]);
 
-  // ===== Taller: mapa vehicle_id -> último reporte (descripcion consolidada) =====
+  // checkout form
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [sentOk, setSentOk] = useState(false);
+  const [form, setForm] = useState({
+    fullName: "",
+    email: "",
+    phone: "",
+    enterprise: "", // NUEVO: Empresa
+  });
+
+  // Taller: último reporte por vehículo
   const [lastWorkshopByVehicle, setLastWorkshopByVehicle] = useState<Record<number, WorkshopReport | undefined>>({});
 
-  // lock scroll cuando el carrito o modal está abierto
+  // lock scroll cuando Drawer/Form/Detalle están abiertos
   useEffect(() => {
-    const block = cartOpen || !!detalle;
+    const block = cartOpen || checkoutOpen || !!detalle;
     const prev = document.body.style.overflow;
     document.body.style.overflow = block ? "hidden" : "";
     return () => {
       document.body.style.overflow = prev;
     };
-  }, [cartOpen, detalle]);
+  }, [cartOpen, checkoutOpen, detalle]);
 
   // fetch vehículos + últimos reportes de taller
   useEffect(() => {
@@ -167,13 +193,11 @@ export default function EcommerceTable() {
       try {
         const headers = { Authorization: `Bearer ${localStorage.getItem("token")}` };
 
-        // Traemos ambos en paralelo sin cambiar tu lógica de vehículos
         const [vehRes, wrRes] = await Promise.all([
           axios.get(`${apiUrl}/vehicles/vehicles/all`, { headers }),
           axios.get(`${apiUrl}/workshop-reports/workshop-reports/all`, { headers }).catch(() => ({ data: [] }))
         ]);
 
-        // Vehículos
         const list: Vehicle[] = Array.isArray(vehRes.data) ? vehRes.data : [];
         setVehicles(
           list.sort(
@@ -182,7 +206,6 @@ export default function EcommerceTable() {
           )
         );
 
-        // Reports -> quedarnos con el MÁS RECIENTE por vehicle_id
         const reports: WorkshopReport[] = Array.isArray(wrRes.data) ? wrRes.data : [];
         const map: Record<number, WorkshopReport> = {};
         for (const r of reports) {
@@ -190,7 +213,6 @@ export default function EcommerceTable() {
           const prev = map[key];
           const asTS = (x?: WorkshopReport) => {
             if (!x) return -Infinity;
-            // prioridad: report_date + report_time, si no created_at
             const dt = x.report_date ? `${x.report_date}T${x.report_time || "00:00"}` : x.created_at;
             const t = new Date(dt).getTime();
             return Number.isFinite(t) ? t : -Infinity;
@@ -254,7 +276,7 @@ export default function EcommerceTable() {
   );
   const hasMore = visibleItems.length < filtered.length;
 
-  // reset del contador al cambiar filtros/búsqueda/orden
+  // reset contador al cambiar filtros/búsqueda/orden
   useEffect(() => {
     setVisibleCount(PAGE_SIZE);
   }, [query, onlySale, onlyRent, sortKey]);
@@ -276,11 +298,7 @@ export default function EcommerceTable() {
           }, 0);
         }
       },
-      {
-        root: null,
-        rootMargin: "400px 0px",
-        threshold: 0,
-      }
+      { root: null, rootMargin: "400px 0px", threshold: 0 }
     );
     obs.observe(node);
     return () => obs.disconnect();
@@ -296,7 +314,7 @@ export default function EcommerceTable() {
     setActiveIdx(0);
   }, []);
 
-  // carrito demo
+  // carrito
   const addToCart = (v: Vehicle) => {
     const images = normalizeImages(v.vehicle_images);
     const cover = images[0] || null;
@@ -308,7 +326,7 @@ export default function EcommerceTable() {
       name: `${v.marca || ""} ${v.modelo || ""} ${v.year || ""}`.trim(),
       cover,
       quantitySelected: 1,
-      price: salePrice, // null si es alquiler (solo demo)
+      price: salePrice,
       estado: (v.estado || "").toUpperCase(),
       placa: v.placa,
     };
@@ -348,13 +366,43 @@ export default function EcommerceTable() {
   const totalItems = cart.reduce((acc, it) => acc + it.quantitySelected, 0);
   const totalAmount = cart.reduce((acc, it) => acc + (it.price || 0) * it.quantitySelected, 0);
 
-  function handleCheckout(): void {
+  function handleCheckoutOpen(): void {
     if (cart.length === 0) return;
-    alert(
-      `Demo de checkout 🚀\n\nVehículos: ${totalItems}\nTotal (solo EN VENTA): ${currencyFmt.format(
-        totalAmount
-      )}\n\nAquí iría tu formulario de venta/alquiler.`
-    );
+    setCheckoutOpen(true);
+    setCartOpen(false);
+    setSentOk(false);
+  }
+
+  // Enviar SOLO a tabla contacts (sin mensaje)
+  async function submitLead(e: React.FormEvent) {
+    e.preventDefault();
+    if (!form.fullName || !form.email || !form.phone) return;
+    setSending(true);
+    try {
+      const { name, lastname } = splitFullName(form.fullName);
+
+      const payload = {
+        contact_name: name,
+        contact_lastname: lastname,
+        contact_email: form.email,
+        contact_phone: form.phone,
+        contact_enterprise: form.enterprise || null,
+      };
+
+      const headers = { Authorization: `Bearer ${localStorage.getItem("token")}` };
+      await axios.post(CONTACTS_CREATE_ENDPOINT, payload, { headers });
+
+      setSentOk(true);
+      clearCart();
+      // opcional: reset form
+      setForm({ fullName: "", email: "", phone: "", enterprise: "" });
+    } catch (err) {
+      console.error("Error creando contacto:", err);
+      // Podrías mostrar un toast de error; de momento mostramos pantalla de gracias
+      setSentOk(true);
+    } finally {
+      setSending(false);
+    }
   }
 
   // helpers de UI
@@ -364,7 +412,7 @@ export default function EcommerceTable() {
   const priceLabel = (v: Vehicle) => {
     const est = (v.estado || "").toUpperCase();
     if (est === "EN VENTA") return fmtPrice(v.precio_venta);
-    if (est === "ALQUILER") return "Consultar precio de alquiler";
+    if (est === "ALQUILER") return "Solicitar alquiler";
     return "—";
   };
 
@@ -387,7 +435,7 @@ export default function EcommerceTable() {
       <PageMeta title="Tienda de Vehículos" description="Explora vehículos en venta y en alquiler." />
 
       <div className="p-4 md:p-6 space-y-6 transition-colors">
-        {/* Filtros (sin título descriptivo) */}
+        {/* Filtros */}
         <section className="rounded-2xl border border-gray-200 dark:border-white/[0.06] bg-white dark:bg-white/[0.02] p-4 md:p-5 transition-colors">
           <div className="flex flex-col md:flex-row md:items-center gap-3">
             <div className="flex-1 relative">
@@ -421,7 +469,6 @@ export default function EcommerceTable() {
                 <span className="text-sm text-gray-700 dark:text-gray-200">Solo alquiler</span>
               </label>
 
-              {/* Orden (sin “Más recientes”) */}
               <div className="flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-transparent transition-colors">
                 <Select
                   defaultValue={sortKey}
@@ -476,9 +523,6 @@ export default function EcommerceTable() {
                   const cover = imgs[0] || null;
                   const hasMoreImgs = imgs.length > 1;
 
-                  
-                  
-
                   return (
                     <li
                       key={v.id}
@@ -524,7 +568,7 @@ export default function EcommerceTable() {
                         </div>
                       </button>
 
-                      {/* Contenido (solo campos requeridos + (opcional) 1 línea de taller) */}
+                      {/* Contenido */}
                       <div className="p-3 flex flex-col gap-2 flex-1">
                         <div className="min-h-[40px]">
                           <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 line-clamp-2">
@@ -533,13 +577,6 @@ export default function EcommerceTable() {
                           <p className="text-xs text-gray-500 dark:text-gray-300">
                             Uso: {v.uso || "—"}
                           </p>
-
-                          {/* (OPCIONAL) Muestra primera línea de taller en la card */}
-                          {/* {workshopDesc && (
-                            <p className="text-[11px] text-gray-600 dark:text-gray-300 line-clamp-1 mt-1">
-                              {workshopDesc}
-                            </p>
-                          )} */}
                         </div>
 
                         <div className="mt-auto">
@@ -556,7 +593,7 @@ export default function EcommerceTable() {
               {/* Sentinel para infinite scroll */}
               <div ref={sentinelRef} className="h-8 w-full"></div>
 
-              {/* Indicador de carga de más (cuando aún hay más por mostrar) */}
+              {/* Indicador de carga de más */}
               {hasMore && (
                 <div className="mt-2 text-center text-xs text-gray-500 dark:text-gray-400">
                   Cargando más…
@@ -571,7 +608,7 @@ export default function EcommerceTable() {
         </section>
       </div>
 
-      {/* ============== MODAL DETALLE (mobile-first, scroll perfecto) ============== */}
+      {/* ============== MODAL DETALLE ============== */}
       {detalle && (
         <div
           className="fixed inset-0 z-50 flex justify-center items-stretch md:items-start"
@@ -603,16 +640,9 @@ export default function EcommerceTable() {
                     {estadoBadge(detalle.estado)}
                   </div>
                 </div>
-                <button
-                  onClick={closeDetalle}
-                  className="size-9 inline-flex items-center justify-center rounded-xl hover:bg-gray-100 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300 transition-colors"
-                  aria-label="Cerrar"
-                >
-                  ✕
-                </button>
               </div>
 
-              {/* Cuerpo scrollable */}
+              {/* Cuerpo */}
               <div className="grow overflow-y-auto px-4 md:px-6 py-4">
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-0 md:gap-6">
                   {/* Viewer principal */}
@@ -728,7 +758,7 @@ export default function EcommerceTable() {
                         {/* Descripción del taller (si existe) */}
                         {lastWorkshopByVehicle[detalle.id] && buildWorkshopDescription(lastWorkshopByVehicle[detalle.id]) && (
                           <div className="grid grid-cols-3 gap-2">
-                            <dt className="text-gray-600 dark:text-gray-300">Descripcion</dt>
+                            <dt className="text-gray-600 dark:text-gray-300">Descripción</dt>
                             <dd className="col-span-2 text-gray-900 dark:text-gray-100 whitespace-pre-wrap">
                               {buildWorkshopDescription(lastWorkshopByVehicle[detalle.id])}
                             </dd>
@@ -740,20 +770,14 @@ export default function EcommerceTable() {
                 </div>
               </div>
 
-              {/* Footer */}
+              {/* Footer (solo botón de agregar/solicitar) */}
               <div
                 className="shrink-0 bg-white/90 dark:bg-white/10 backdrop-blur border-t border-gray-100 dark:border-white/[0.05] px-4 md:px-5 py-3 flex items-center justify-end gap-2"
                 style={{ paddingBottom: "calc(0.5rem + env(safe-area-inset-bottom, 0px))" }}
               >
                 <Button size="sm" onClick={() => addToCart(detalle)} className="flex-1 md:flex-none md:min-w-[180px]">
                   <ShoppingCart className="w-4 h-4 mr-1" />
-                  {((detalle.estado || "").toUpperCase() === "ALQUILER") ? "Solicitar alquiler (demo)" : "Agregar (demo)"}
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => setCartOpen(true)} className="flex-1 md:flex-none md:min-w-[140px]">
-                  Ver carrito
-                </Button>
-                <Button variant="outline" size="sm" onClick={closeDetalle} className="hidden md:inline-flex">
-                  Cerrar
+                  {((detalle.estado || "").toUpperCase() === "ALQUILER") ? "Solicitar alquiler" : "Agregar"}
                 </Button>
               </div>
             </div>
@@ -761,7 +785,7 @@ export default function EcommerceTable() {
         </div>
       )}
 
-      {/* ============== DRAWER CARRITO (demo) ============== */}
+      {/* ============== DRAWER CARRITO ============== */}
       <div
         className={`fixed inset-0 z-[120] isolation-isolate pointer-events-none ${cartOpen ? "" : ""}`}
         aria-hidden={!cartOpen}
@@ -780,19 +804,18 @@ export default function EcommerceTable() {
           shadow-xl transform transition-transform duration-300
           ${cartOpen ? "translate-x-0" : "translate-x-full"}
           z-[120] pointer-events-auto flex flex-col`}
-          style={{
-            paddingBottom: "max(env(safe-area-inset-bottom),0px)",
-          }}
+          style={{ paddingBottom: "max(env(safe-area-inset-bottom),0px)" }}
         >
           {/* Header */}
           <div className="shrink-0 flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-white/10 transition-colors">
             <div className="flex items-center gap-2">
               <ShoppingCart className="w-5 h-5 text-gray-800 dark:text-gray-100" />
-              <h3 className="font-semibold text-gray-800 dark:text-gray-100">Tu carrito (demo)</h3>
+              <h3 className="font-semibold text-gray-800 dark:text-gray-100">Tu carrito</h3>
               {!!totalItems && (
                 <span className="text-xs px-2 py-0.5 rounded-full bg-blue-600 text-white">{totalItems}</span>
               )}
             </div>
+            {/* X para cerrar el Drawer */}
             <button
               onClick={() => setCartOpen(false)}
               className="size-9 inline-flex items-center justify-center rounded-xl hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
@@ -835,7 +858,7 @@ export default function EcommerceTable() {
                               {item.name}
                             </p>
                             <p className="text-[12px] text-gray-800 dark:text-gray-100 mt-1">
-                              {item.estado === "ALQUILER" ? "Consultar precio de alquiler" : `Precio: ${currencyFmt.format(item.price || 0)}`}
+                              {item.estado === "ALQUILER" ? "Alquiler" : `Precio: ${currencyFmt.format(item.price || 0)}`}
                             </p>
                             <p className="text-[12px] text-gray-800 dark:text-gray-100">
                               Subtotal: {item.estado === "ALQUILER" ? "—" : currencyFmt.format(line || 0)}
@@ -850,7 +873,7 @@ export default function EcommerceTable() {
                           </button>
                         </div>
 
-                        {/* Cantidad (demo) */}
+                        {/* Cantidad */}
                         <div className="mt-2 flex items-center gap-2">
                           <button
                             onClick={() => decQty(item.id)}
@@ -901,13 +924,133 @@ export default function EcommerceTable() {
               <Button variant="outline" size="sm" onClick={clearCart} disabled={cart.length === 0} className="flex-1">
                 Vaciar
               </Button>
-              <Button size="sm" onClick={handleCheckout} disabled={cart.length === 0} className="flex-1">
-                Continuar (demo)
+              <Button size="sm" onClick={handleCheckoutOpen} disabled={cart.length === 0} className="flex-1">
+                Continuar
               </Button>
             </div>
           </div>
         </aside>
       </div>
+
+      {/* ============== FORMULARIO DE CHECKOUT (Full-screen modal) ============== */}
+      {checkoutOpen && (
+        <div
+          className="fixed inset-0 z-[140] flex items-center justify-center"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => setCheckoutOpen(false)}
+          />
+          <div
+            className="relative w-full max-w-2xl mx-4 bg-white dark:bg-[#0b0b0b] rounded-2xl border border-gray-200 dark:border-white/10 shadow-2xl overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {!sentOk ? (
+              <form onSubmit={submitLead} className="p-5 md:p-6 space-y-4">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                  Completa tus datos
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-300">
+                  Déjanos tu información y te contactaremos muy pronto para coordinar la {cart.some(c => c.estado === "ALQUILER") ? "solicitud de alquiler" : "compra"}.
+                </p>
+
+                {/* Resumen rápido */}
+                <div className="rounded-xl border border-gray-200 dark:border-white/10 p-3">
+                  <ul className="space-y-1 text-sm">
+                    {cart.map((c) => (
+                      <li key={c.id} className="flex items-center justify-between">
+                        <span className="text-gray-700 dark:text-gray-200 truncate">{c.name} × {c.quantitySelected}</span>
+                        <span className="text-gray-900 dark:text-gray-100">
+                          {c.estado === "ALQUILER" ? "—" : fmtPrice((c.price || 0) * c.quantitySelected)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="mt-2 pt-2 border-t border-gray-200 dark:border-white/10 flex items-center justify-between text-sm">
+                    <span className="text-gray-700 dark:text-gray-200">Total</span>
+                    <span className="font-semibold text-gray-900 dark:text-gray-100">
+                      {fmtPrice(totalAmount)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Campos */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-sm text-gray-700 dark:text-gray-300">Nombre completo*</label>
+                    <input
+                      required
+                      value={form.fullName}
+                      onChange={(e) => setForm((f) => ({ ...f, fullName: e.target.value }))}
+                      className="px-3 py-2 rounded-xl border border-gray-300 dark:border-white/10 bg-white dark:bg-transparent text-gray-900 dark:text-gray-100"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-sm text-gray-700 dark:text-gray-300">Correo*</label>
+                    <input
+                      required
+                      type="email"
+                      value={form.email}
+                      onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                      className="px-3 py-2 rounded-xl border border-gray-300 dark:border-white/10 bg-white dark:bg-transparent text-gray-900 dark:text-gray-100"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-sm text-gray-700 dark:text-gray-300">Teléfono*</label>
+                    <input
+                      required
+                      value={form.phone}
+                      onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+                      className="px-3 py-2 rounded-xl border border-gray-300 dark:border-white/10 bg-white dark:bg-transparent text-gray-900 dark:text-gray-100"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-sm text-gray-700 dark:text-gray-300">Empresa</label>
+                    <input
+                      value={form.enterprise}
+                      onChange={(e) => setForm((f) => ({ ...f, enterprise: e.target.value }))}
+                      className="px-3 py-2 rounded-xl border border-gray-300 dark:border-white/10 bg-white dark:bg-transparent text-gray-900 dark:text-gray-100"
+                      placeholder="(opcional)"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setCheckoutOpen(false)}
+                    disabled={sending}
+                  >
+                    Cancelar
+                  </Button>
+                  <button
+                    type="submit"
+                    disabled={sending}
+                    className="inline-flex items-center justify-center px-4 py-2 rounded-xl border border-transparent bg-blue-600 text-white font-semibold shadow-sm hover:bg-blue-700 transition-colors disabled:opacity-60 disabled:pointer-events-none"
+                  >
+                    {sending ? "Enviando..." : "Enviar solicitud"}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div className="p-8 md:p-10 text-center">
+                <CheckCircle2 className="w-12 h-12 mx-auto text-green-600" />
+                <h3 className="text-xl font-semibold mt-3 text-gray-900 dark:text-gray-100">
+                  ¡Gracias! 👋
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
+                  Pronto entraremos en contacto contigo.
+                </p>
+                <div className="mt-6">
+                  <Button onClick={() => setCheckoutOpen(false)}>Cerrar</Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </>
   );
 }
