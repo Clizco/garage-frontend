@@ -4,6 +4,8 @@ import Select from "../../components/form/Select";
 import Button from "../../components/ui/button/Button";
 import Badge from "../../components/ui/badge/Badge";
 import { useNavigate } from "react-router-dom";
+import { useSortable } from "../../hooks/useSortable";
+import SortableHeader from "../../components/common/SortableHeader";
 
 const apiUrl = import.meta.env.VITE_API_URL || "";
 
@@ -90,6 +92,8 @@ export default function DriverTable() {
     ),
   ]);
 
+  const { sorted, sortKey, sortDir, toggle } = useSortable(filtered);
+
   const handleDownloadFile = (path: string | undefined) => {
     if (!path) return;
     const url = `${apiUrl}/${path}`;
@@ -153,27 +157,18 @@ export default function DriverTable() {
         <table className="min-w-full divide-y divide-gray-100 dark:divide-white/[0.05]">
           <thead className="bg-gray-100 dark:bg-white/[0.02]">
             <tr>
-              {[
-                "Nombre",
-                "Apellido",
-                "Identificación",
-                "Correo",
-                "Teléfono",
-                "Control de licencia",
-                "Tipo",
-                "Nacionalidad",
-              ].map((h) => (
-                <th
-                  key={h}
-                  className="px-5 py-3 text-sm text-start text-gray-600 dark:text-gray-300"
-                >
-                  {h}
-                </th>
-              ))}
+              <SortableHeader label="Nombre" sortKey="driver_name" currentKey={sortKey} dir={sortDir} onToggle={toggle} />
+              <SortableHeader label="Apellido" sortKey="driver_lastname" currentKey={sortKey} dir={sortDir} onToggle={toggle} />
+              <SortableHeader label="Identificación" sortKey="driver_identification" currentKey={sortKey} dir={sortDir} onToggle={toggle} />
+              <SortableHeader label="Correo" sortKey="driver_email" currentKey={sortKey} dir={sortDir} onToggle={toggle} />
+              <SortableHeader label="Teléfono" sortKey="driver_phone" currentKey={sortKey} dir={sortDir} onToggle={toggle} />
+              <SortableHeader label="Control de licencia" sortKey="driver_control_number" currentKey={sortKey} dir={sortDir} onToggle={toggle} />
+              <SortableHeader label="Tipo" sortKey="driver_license_type" currentKey={sortKey} dir={sortDir} onToggle={toggle} />
+              <SortableHeader label="Nacionalidad" sortKey="driver_nationality" currentKey={sortKey} dir={sortDir} onToggle={toggle} />
             </tr>
           </thead>
           <tbody>
-            {filtered.map((d) => (
+            {sorted.map((d) => (
               <tr
                 key={d.id}
                 onClick={() => setDetalle(d)}
@@ -212,7 +207,7 @@ export default function DriverTable() {
       </div>
 
       <div className="block md:hidden p-4 space-y-4">
-        {filtered.map((d) => (
+        {sorted.map((d) => (
           <div
             key={d.id}
             onClick={() => setDetalle(d)}

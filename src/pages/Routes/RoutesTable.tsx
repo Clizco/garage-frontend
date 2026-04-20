@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import RouteForm from "./CreateRoutes/CreateRoutes";
+import { useSortable } from "../../hooks/useSortable";
+import SortableHeader from "../../components/common/SortableHeader";
 
 const apiUrl = import.meta.env.VITE_API_URL || "";
 const RUTA_PROCESO_KEY = "ruta_en_proceso";
@@ -170,6 +172,8 @@ export default function RoutesTable() {
     r.placa.toLowerCase().includes(search.toLowerCase())
   );
 
+  const { sorted, sortKey, sortDir, toggle } = useSortable(filteredRutas);
+
   return (
     <div className="overflow-hidden w-full max-w-screen-xl mx-auto rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
       <div className="p-4 flex flex-col md:flex-row md:justify-between md:items-center gap-4">
@@ -214,13 +218,16 @@ export default function RoutesTable() {
         <table className="min-w-full divide-y divide-gray-100 dark:divide-white/[0.05]">
           <thead className="bg-gray-100 dark:bg-white/[0.02]">
             <tr>
-              {["Placa", "Conductor", "Ruta", "Tiempo", "Fecha", "Hora Final"].map((t, i) => (
-                <th key={i} className="px-5 py-3 text-sm text-start text-gray-600 dark:text-gray-300">{t}</th>
-              ))}
+              <SortableHeader label="Placa" sortKey="placa" currentKey={sortKey} dir={sortDir} onToggle={toggle} />
+              <SortableHeader label="Conductor" sortKey="driver_name" currentKey={sortKey} dir={sortDir} onToggle={toggle} />
+              <SortableHeader label="Ruta" sortKey="route_name" currentKey={sortKey} dir={sortDir} onToggle={toggle} />
+              <SortableHeader label="Tiempo" sortKey="travel_time" currentKey={sortKey} dir={sortDir} onToggle={toggle} />
+              <SortableHeader label="Fecha" sortKey="created_at" currentKey={sortKey} dir={sortDir} onToggle={toggle} />
+              <SortableHeader label="Hora Final" sortKey="end_at" currentKey={sortKey} dir={sortDir} onToggle={toggle} />
             </tr>
           </thead>
           <tbody>
-            {filteredRutas.map((r) => (
+            {sorted.map((r) => (
               <tr key={r.id} className="hover:bg-gray-50 dark:hover:bg-white/[0.05] cursor-pointer" onClick={() => setDetalle(r)}>
                 <td className="px-5 py-3 text-sm text-gray-800 dark:text-white">{r.placa}</td>
                 <td className="px-5 py-3 text-sm text-gray-800 dark:text-white">{r.driver_name} {r.driver_lastname}</td>
@@ -236,7 +243,7 @@ export default function RoutesTable() {
 
       {/* Tarjetas Mobile */}
       <div className="block md:hidden p-4 space-y-4">
-        {filteredRutas.map((r) => (
+        {sorted.map((r) => (
           <div key={r.id} onClick={() => setDetalle(r)} className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/[0.05] rounded-xl p-4 shadow-sm cursor-pointer text-gray-800 dark:text-gray-200">
             <p><strong>Fecha:</strong> {formatearFecha(r.created_at)}</p>
             <p><strong>Ruta:</strong> {r.route_name}</p>

@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import Button from "../../components/ui/button/Button";
 import { useNavigate } from "react-router-dom";
+import { useSortable } from "../../hooks/useSortable";
+import SortableHeader from "../../components/common/SortableHeader";
 
 const apiUrl = import.meta.env.VITE_API_URL || "";
 
@@ -56,6 +58,8 @@ export default function ClientTable() {
     ...Array.from(new Set(clients.map((c) => c.client_type))),
   ]);
 
+  const { sorted, sortKey, sortDir, toggle } = useSortable(filtered);
+
   return (
     <div className="overflow-hidden w-full max-w-screen-xl mx-auto rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
       <div className="p-4 flex flex-wrap gap-4 items-center">
@@ -88,18 +92,13 @@ export default function ClientTable() {
         <table className="min-w-full divide-y divide-gray-100 dark:divide-white/[0.05]">
           <thead className="bg-gray-100 dark:bg-white/[0.02]">
             <tr>
-              {["Nombre", "RUC", "Tipo" ].map((h) => (
-                <th
-                  key={h}
-                  className="px-5 py-3 text-sm text-start text-gray-600 dark:text-gray-300"
-                >
-                  {h}
-                </th>
-              ))}
+              <SortableHeader label="Nombre" sortKey="client_name" currentKey={sortKey} dir={sortDir} onToggle={toggle} />
+              <SortableHeader label="RUC" sortKey="client_ruc" currentKey={sortKey} dir={sortDir} onToggle={toggle} />
+              <SortableHeader label="Tipo" sortKey="client_type" currentKey={sortKey} dir={sortDir} onToggle={toggle} />
             </tr>
           </thead>
           <tbody>
-            {filtered.map((c) => (
+            {sorted.map((c) => (
               <tr
                 key={c.id}
                 onClick={() => setDetalle(c)}

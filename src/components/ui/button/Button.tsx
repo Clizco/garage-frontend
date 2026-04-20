@@ -42,6 +42,7 @@ const Button: React.FC<ButtonProps> = ({
       } ${variantClasses[variant]} ${
         disabled ? "cursor-not-allowed opacity-50" : ""
       }`}
+      type="button"
       onClick={onClick}
       disabled={disabled}
     >

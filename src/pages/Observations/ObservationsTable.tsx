@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import Select from "../../components/form/Select";
 import CreateObservationForm from "./CreateObservations/CreateObservations"; // Importa el formulario
+import { useSortable } from "../../hooks/useSortable";
+import SortableHeader from "../../components/common/SortableHeader";
 
 const apiUrl = import.meta.env.VITE_API_URL || "";
 
@@ -64,6 +66,8 @@ export default function ObservationsTable() {
     return matchesSearch && matchesMonth;
   });
 
+  const { sorted, sortKey, sortDir, toggle } = useSortable(filteredObservations);
+
   return (
     <div className="overflow-hidden w-full max-w-screen-xl mx-auto rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
       <div className="p-4 flex flex-col md:flex-row md:justify-between md:items-center gap-4">
@@ -91,15 +95,16 @@ export default function ObservationsTable() {
         <table className="min-w-full divide-y divide-gray-100 dark:divide-white/[0.05]">
           <thead className="bg-gray-100 dark:bg-white/[0.02]">
             <tr>
-              {["Placa", "Marca", "Modelo", "Año", "Color", "Nombre", "Cédula", "Fecha"].map((t, i) => (
-                <th key={i} className="px-5 py-3 text-sm text-start text-gray-600 dark:text-gray-300">
-                  {t}
-                </th>
-              ))}
+              <SortableHeader label="Placa" sortKey="vehicle_license_plate" currentKey={sortKey} dir={sortDir} onToggle={toggle} />
+              <SortableHeader label="Marca" sortKey="vehicle_brand" currentKey={sortKey} dir={sortDir} onToggle={toggle} />
+              <SortableHeader label="Color" sortKey="vehicle_color" currentKey={sortKey} dir={sortDir} onToggle={toggle} />
+              <SortableHeader label="Nombre" sortKey="person_name" currentKey={sortKey} dir={sortDir} onToggle={toggle} />
+              <SortableHeader label="Cédula" sortKey="person_identification" currentKey={sortKey} dir={sortDir} onToggle={toggle} />
+              <SortableHeader label="Fecha" sortKey="created_at" currentKey={sortKey} dir={sortDir} onToggle={toggle} />
             </tr>
           </thead>
-          <tbody>
-            {filteredObservations.map((o) => (
+          <tbody className="text-gray-800 dark:text-gray-200">
+            {sorted.map((o) => (
               <tr
                 key={o.id}
                 className="hover:bg-gray-50 dark:hover:bg-white/[0.05] cursor-pointer"
@@ -107,8 +112,6 @@ export default function ObservationsTable() {
               >
                 <td className="px-5 py-3 text-sm">{o.vehicle_license_plate}</td>
                 <td className="px-5 py-3 text-sm">{o.vehicle_brand}</td>
-                <td className="px-5 py-3 text-sm">{o.vehicle_model}</td>
-                <td className="px-5 py-3 text-sm">{o.vehicle_year}</td>
                 <td className="px-5 py-3 text-sm">{o.vehicle_color}</td>
                 <td className="px-5 py-3 text-sm">{`${o.person_name} ${o.person_lastname}`}</td>
                 <td className="px-5 py-3 text-sm">{o.person_identification}</td>
@@ -121,16 +124,14 @@ export default function ObservationsTable() {
 
       {/* Tarjetas Mobile */}
       <div className="block md:hidden p-4 space-y-4">
-        {filteredObservations.map((o) => (
+        {sorted.map((o) => (
           <div
             key={o.id}
             onClick={() => setDetalle(o)}
-            className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/[0.05] rounded-xl p-4 shadow-sm cursor-pointer"
+            className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/[0.05] rounded-xl p-4 shadow-sm cursor-pointer text-gray-800 dark:text-gray-200"
           >
             <p><strong>Placa:</strong> {o.vehicle_license_plate}</p>
             <p><strong>Marca:</strong> {o.vehicle_brand}</p>
-            <p><strong>Modelo:</strong> {o.vehicle_model}</p>
-            <p><strong>Año:</strong> {o.vehicle_year}</p>
             <p><strong>Color:</strong> {o.vehicle_color}</p>
             <p><strong>Nombre:</strong> {o.person_name} {o.person_lastname}</p>
             <p><strong>Cédula:</strong> {o.person_identification}</p>

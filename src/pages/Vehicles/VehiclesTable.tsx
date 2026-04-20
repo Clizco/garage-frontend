@@ -4,6 +4,8 @@ import Select from "../../components/form/Select";
 import Button from "../../components/ui/button/Button";
 import Badge from "../../components/ui/badge/Badge";
 import { useNavigate } from "react-router-dom";
+import { useSortable } from "../../hooks/useSortable";
+import SortableHeader from "../../components/common/SortableHeader";
 
 const apiUrl = import.meta.env.VITE_API_URL || "";
 
@@ -110,6 +112,8 @@ export default function VehicleTable() {
     window.open(url, "_blank");
   };
 
+  const { sorted, sortKey, sortDir, toggle } = useSortable(filtered);
+
   return (
     <div className="overflow-hidden w-full max-w-screen-xl mx-auto rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
       <div className="p-4 flex flex-wrap gap-4 items-center">
@@ -135,15 +139,18 @@ export default function VehicleTable() {
         <table className="min-w-full divide-y divide-gray-100 dark:divide-white/[0.05]">
           <thead className="bg-gray-100 dark:bg-white/[0.02]">
             <tr>
-              {["Placa", "Propietario", "Marca", "Modelo", "VIN", "Año", "Uso", "Precio"].map((h) => (
-                <th key={h} className="px-5 py-3 text-sm text-start text-gray-600 dark:text-gray-300">
-                  {h}
-                </th>
-              ))}
+              <SortableHeader label="Placa" sortKey="placa" currentKey={sortKey} dir={sortDir} onToggle={toggle} />
+              <SortableHeader label="Propietario" sortKey="propietario" currentKey={sortKey} dir={sortDir} onToggle={toggle} />
+              <SortableHeader label="Marca" sortKey="marca" currentKey={sortKey} dir={sortDir} onToggle={toggle} />
+              <SortableHeader label="Modelo" sortKey="modelo" currentKey={sortKey} dir={sortDir} onToggle={toggle} />
+              <SortableHeader label="VIN" sortKey="vin" currentKey={sortKey} dir={sortDir} onToggle={toggle} />
+              <SortableHeader label="Año" sortKey="year" currentKey={sortKey} dir={sortDir} onToggle={toggle} />
+              <SortableHeader label="Uso" sortKey="uso" currentKey={sortKey} dir={sortDir} onToggle={toggle} />
+              <SortableHeader label="Precio" sortKey="precio" currentKey={sortKey} dir={sortDir} onToggle={toggle} />
             </tr>
           </thead>
           <tbody>
-            {filtered.map((v) => (
+            {sorted.map((v) => (
               <tr
                 key={v.id}
                 onClick={() => {
@@ -167,7 +174,7 @@ export default function VehicleTable() {
       </div>
 
       <div className="block md:hidden p-4 space-y-4">
-        {filtered.map((v) => (
+        {sorted.map((v) => (
           <div
             key={v.id}
             onClick={() => {

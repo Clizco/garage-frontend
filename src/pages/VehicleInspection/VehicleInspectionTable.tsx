@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import CreateVehicleInspectionForm from "./CreateVehicleInspection/CreateVehicleInspection";
 import Select from "../../components/form/Select";
+import { useSortable } from "../../hooks/useSortable";
+import SortableHeader from "../../components/common/SortableHeader";
 
 const apiUrl = import.meta.env.VITE_API_URL || "";
 
@@ -111,7 +113,7 @@ export default function InspeccionVehicularView() {
       alert("Error al eliminar el reporte. Intente nuevamente.");
     }
   }
-
+  const { sorted, sortKey, sortDir, toggle } = useSortable(filteredInspecciones);
   return (
     <div className="overflow-hidden w-full max-w-screen-xl mx-auto rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
       <div className="p-4 flex flex-col md:flex-row md:justify-between md:items-center gap-4">
@@ -154,20 +156,17 @@ export default function InspeccionVehicularView() {
         <table className="min-w-full divide-y divide-gray-100 dark:divide-white/[0.05]">
           <thead className="bg-gray-100 dark:bg-white/[0.02]">
             <tr>
-              {["Placa", "Tipo", "Fecha", "Hora", "Km", "Combustible", "Observaciones"].map(
-                (t, i) => (
-                  <th
-                    key={i}
-                    className="px-5 py-3 text-sm text-start text-gray-600 dark:text-gray-300"
-                  >
-                    {t}
-                  </th>
-                )
-              )}
+              <SortableHeader label="Placa" sortKey="placa" currentKey={sortKey} dir={sortDir} onToggle={toggle} />
+              <SortableHeader label="Tipo" sortKey="tipo" currentKey={sortKey} dir={sortDir} onToggle={toggle} />
+              <SortableHeader label="Fecha" sortKey="fecha" currentKey={sortKey} dir={sortDir} onToggle={toggle} />
+              <SortableHeader label="Hora" sortKey="hora" currentKey={sortKey} dir={sortDir} onToggle={toggle} />
+              <SortableHeader label="Km" sortKey="kilometraje" currentKey={sortKey} dir={sortDir} onToggle={toggle} />
+              <SortableHeader label="Combustible" sortKey="nivel_combustible" currentKey={sortKey} dir={sortDir} onToggle={toggle} />
+              <SortableHeader label="Observaciones" sortKey="observaciones" currentKey={sortKey} dir={sortDir} onToggle={toggle} />
             </tr>
           </thead>
           <tbody>
-            {filteredInspecciones.map((i) => (
+            {sorted.map((i) => (
               <tr
                 key={i.id}
                 className="hover:bg-gray-50 dark:hover:bg-white/[0.05] cursor-pointer"

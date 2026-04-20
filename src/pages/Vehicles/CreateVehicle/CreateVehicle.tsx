@@ -32,6 +32,7 @@ export default function CreateVehicle() {
     year: '',
     uso: '',
     precio: '',
+    panapass: '',
   });
 
   const [ruvFile, setRuvFile] = useState<File | null>(null);
@@ -133,17 +134,8 @@ export default function CreateVehicle() {
   };
 
   return (
-    <ComponentCard title="Registrar Vehículo">
+    <ComponentCard title={<button onClick={() => navigate(-1)} className="flex items-center gap-2 hover:text-blue-500 transition-colors"><span>←</span> Registrar Vehículo</button>}>
       <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="flex justify-start">
-          <button
-            type="button"
-            onClick={() => navigate(-1)}
-            className="bg-blue-500 text-white px-4 py-2 rounded shadow hover:bg-blue-600"
-          >
-            Volver
-          </button>
-        </div>
 
         {Object.entries(form).map(([key, value]) => (
           key === 'mes_de_placa' ? (
