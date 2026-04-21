@@ -87,16 +87,22 @@ export default function CreateMilage() {
   };
 
   return (
-    <ComponentCard title="Registrar Kilometraje">
+    <ComponentCard
+      title={
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="inline-flex items-center justify-center text-gray-700 dark:text-gray-200 hover:text-blue-500 dark:hover:text-blue-400 text-xl"
+            aria-label="Volver"
+          >
+            ←
+          </button>
+          <span>Registrar Kilometraje</span>
+        </div>
+      }
+    >
       <form onSubmit={handleSubmit} className="space-y-6">
-        <button
-          type="button"
-          onClick={() => navigate(-1)}
-          className="bg-blue-500 text-white px-4 py-2 rounded shadow hover:bg-blue-600 dark:hover:bg-blue-600"
-        >
-          Volver
-        </button>
-
         {/* Placa */}
         <div className="relative">
           <Label className="dark:text-gray-300">Placa</Label>
@@ -144,34 +150,38 @@ export default function CreateMilage() {
           </div>
         )}
 
-        {/* Kilometraje */}
-        <div>
-          <Label className="dark:text-gray-300">Kilometraje</Label>
-          <input
-            type="text"
-            value={formatKilometraje(form.mileage)}
-            onChange={(e) => {
-              const raw = e.target.value.replace(/\D/g, '').substring(0, 10);
-              setForm({ ...form, mileage: raw });
-            }}
-            placeholder="Ej: 999,999.99"
-            inputMode="numeric"
-            className="w-full border rounded px-3 py-2 bg-white dark:bg-gray-800 dark:text-white"
-          />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Kilometraje */}
+          <div>
+            <Label className="dark:text-gray-300">Kilometraje</Label>
+            <input
+              type="text"
+              value={formatKilometraje(form.mileage)}
+              onChange={(e) => {
+                const raw = e.target.value.replace(/\D/g, '').substring(0, 10);
+                setForm({ ...form, mileage: raw });
+              }}
+              placeholder="Ej: 999,999.99"
+              inputMode="numeric"
+              className="w-full border rounded px-3 py-2 bg-white dark:bg-gray-800 dark:text-white"
+            />
+          </div>
+
+          {/* Fecha */}
+          <div className="relative">
+            <Label className="dark:text-gray-300">Fecha</Label>
+            <DatePicker
+              selected={form.date}
+              onChange={(date) => setForm({ ...form, date })}
+              dateFormat="dd/MM/yyyy"
+              wrapperClassName="w-full"
+              className="w-full border rounded px-3 py-2 bg-white dark:bg-gray-800 dark:text-white"
+              popperClassName="!z-[9999]"
+            />
+          </div>
         </div>
 
-        {/* Fecha */}
-        <div>
-          <Label className="dark:text-gray-300">Fecha</Label>
-          <DatePicker
-            selected={form.date}
-            onChange={(date) => setForm({ ...form, date })}
-            dateFormat="dd/MM/yyyy"
-            className="w-full border rounded px-3 py-2 bg-white dark:bg-gray-800 dark:text-white"
-          />
-        </div>
-
-        <Button variant="primary" size="md" className="w-full dark:hover:bg-blue-600">
+        <Button type="submit" variant="primary" size="md" className="w-full dark:hover:bg-blue-600">
           Registrar Kilometraje
         </Button>
 
