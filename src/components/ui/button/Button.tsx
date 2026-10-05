@@ -8,6 +8,7 @@ interface ButtonProps {
   endIcon?: ReactNode; // Icon after the text
   onClick?: () => void; // Click handler
   disabled?: boolean; // Disabled state
+  type?: "button" | "submit" | "reset"; // Native button type
   className?: string; // Disabled state
 }
 
@@ -20,6 +21,7 @@ const Button: React.FC<ButtonProps> = ({
   onClick,
   className = "",
   disabled = false,
+  type = "button",
 }) => {
   // Size Classes
   const sizeClasses = {
@@ -42,7 +44,7 @@ const Button: React.FC<ButtonProps> = ({
       } ${variantClasses[variant]} ${
         disabled ? "cursor-not-allowed opacity-50" : ""
       }`}
-      type="button"
+      type={type}
       onClick={onClick}
       disabled={disabled}
     >
